@@ -1,682 +1,231 @@
 import 'package:flutter/material.dart';
-import 'package:karvaan/theme/app_theme.dart';
-import 'package:karvaan/widgets/custom_button.dart';
-import 'package:karvaan/screens/services/add_service_record_screen.dart';
-import 'package:karvaan/screens/services/service_detail_screen.dart';
+import 'package:intl/intl.dart';
+import 'package:karvaan/models/service_model.dart';
+import 'package:karvaan/models/vehicle_model.dart';
+import 'package:karvaan/routes/app_routes.dart';
+import 'package:karvaan/services/service_record_service.dart';
+import 'package:karvaan/services/vehicle_service.dart';
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({Key? key}) : super(key: key);
 
   @override
-  State<ServicesScreen> createState() => _ServicesScreenState();
+  _ServicesScreenState createState() => _ServicesScreenState();
 }
 
-class _ServicesScreenState extends State<ServicesScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  
+class _ServicesScreenState extends State<ServicesScreen> {
+  final ServiceRecordService _serviceRecordService = ServiceRecordService.instance;
+  final VehicleService _vehicleService = VehicleService.instance;
+  bool _isLoading = true;
+  List<VehicleModel> _vehicles = [];
+  Map<String, List<ServiceModel>> _servicesByVehicle = {};
+  String? _errorMessage;
+  VehicleModel? _selectedVehicle;
+  final DateFormat _dateFormat = DateFormat('dd MMM yyyy');
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _loadData();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Load all vehicles
+      final vehicles = await _vehicleService.getVehiclesForCurrentUser();
+      
+      // If there are vehicles, load services for the first vehicle
+      if (vehicles.isNotEmpty) {
+        _selectedVehicle = vehicles.first;
+        await _loadServicesForVehicle(_selectedVehicle!.id!.toHexString());
+      }
+      
+      if (mounted) {
+        setState(() {
+          _vehicles = vehicles;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error loading data: ${e.toString()}';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadServicesForVehicle(String vehicleId) async {
+    try {
+      final services = await _serviceRecordService.getServiceRecordsForVehicle(vehicleId);
+      
+      if (mounted) {
+        setState(() {
+          _servicesByVehicle[vehicleId] = services;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading services: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  void _selectVehicle(VehicleModel vehicle) {
+    setState(() {
+      _selectedVehicle = vehicle;
+    });
+    
+    // Load services for this vehicle if not already loaded
+    if (!_servicesByVehicle.containsKey(vehicle.id!.toHexString())) {
+      _loadServicesForVehicle(vehicle.id!.toHexString());
+    }
+  }
+
+  Future<void> _addServiceRecord() async {
+    if (_selectedVehicle == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a vehicle first')),
+      );
+      return;
+    }
+
+    final result = await Navigator.pushNamed(
+      context, 
+      AppRoutes.addService,
+      arguments: {'vehicleId': _selectedVehicle!.id!.toHexString()},
+    );
+
+    if (result == true) {
+      _loadServicesForVehicle(_selectedVehicle!.id!.toHexString());
+    }
+  }
+
+  void _viewServiceDetail(ServiceModel service) {
+    Navigator.pushNamed(
+      context, 
+      AppRoutes.serviceDetail,
+      arguments: {'serviceId': service.id!.toHexString()},
+    ).then((result) {
+      if (result == true && _selectedVehicle != null) {
+        _loadServicesForVehicle(_selectedVehicle!.id!.toHexString());
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Services'),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppTheme.primaryColor,
-          tabs: const [
-            Tab(text: 'Upcoming'),
-            Tab(text: 'History'),
-            Tab(text: 'Reminders'),
-          ],
-        ),
+        title: const Text('Service Records'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              // TODO: Implement search
-            },
+            icon: const Icon(Icons.add),
+            onPressed: _addServiceRecord,
           ),
         ],
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildUpcomingTab(),
-          _buildHistoryTab(),
-          _buildRemindersTab(),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppTheme.primaryColor,
-        child: const Icon(Icons.add),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddServiceRecordScreen()),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildUpcomingTab() {
-    // Sample upcoming services
-    final upcomingServices = [
-      {
-        'id': '1',
-        'title': 'Oil Change',
-        'vehicle': 'Toyota Corolla',
-        'date': 'June 15, 2023',
-        'status': 'Due in 2 days',
-        'urgent': true,
-        'icon': Icons.oil_barrel,
-        'iconColor': Colors.amber,
-      },
-      {
-        'id': '2',
-        'title': 'Tire Rotation',
-        'vehicle': 'Honda City',
-        'date': 'June 20, 2023',
-        'status': 'Due in 1 week',
-        'urgent': false,
-        'icon': Icons.tire_repair,
-        'iconColor': Colors.blue,
-      },
-      {
-        'id': '3',
-        'title': 'Air Filter Replacement',
-        'vehicle': 'Toyota Corolla',
-        'date': 'July 5, 2023',
-        'status': 'Due in 3 weeks',
-        'urgent': false,
-        'icon': Icons.air,
-        'iconColor': Colors.purple,
-      },
-    ];
-
-    if (upcomingServices.isEmpty) {
-      return _buildEmptyState(
-        'No upcoming services',
-        'You have no scheduled maintenance coming up.',
-        Icons.build_circle_outlined,
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: upcomingServices.length,
-      itemBuilder: (context, index) {
-        final service = upcomingServices[index];
-        return _buildServiceCard(
-          id: service['id'].toString(),
-          title: service['title'].toString(),
-          vehicle: service['vehicle'].toString(),
-          date: service['date'].toString(),
-          status: service['status'].toString(),
-          urgent: service['urgent'] as bool,
-          icon: service['icon'] as IconData,
-          iconColor: service['iconColor'] as Color,
-        );
-      },
-    );
-  }
-
-  Widget _buildHistoryTab() {
-    // Sample service history
-    final serviceHistory = [
-      {
-        'id': '4',
-        'title': 'Oil Change',
-        'vehicle': 'Toyota Corolla',
-        'date': 'April 10, 2023',
-        'mileage': '12,500 km',
-        'cost': 'Rs. 2,500',
-        'icon': Icons.oil_barrel,
-        'iconColor': Colors.amber,
-      },
-      {
-        'id': '5',
-        'title': 'Brake Pad Replacement',
-        'vehicle': 'Honda City',
-        'date': 'March 22, 2023',
-        'mileage': '8,000 km',
-        'cost': 'Rs. 5,200',
-        'icon': Icons.build, // Fixed: Changed from Icons.brake_alert to Icons.build
-        'iconColor': Colors.red,
-      },
-      {
-        'id': '6',
-        'title': 'Annual Inspection',
-        'vehicle': 'Toyota Corolla',
-        'date': 'February 15, 2023',
-        'mileage': '10,000 km',
-        'cost': 'Rs. 3,500',
-        'icon': Icons.checklist,
-        'iconColor': Colors.green,
-      },
-    ];
-
-    if (serviceHistory.isEmpty) {
-      return _buildEmptyState(
-        'No service history',
-        'You haven\'t recorded any services yet.',
-        Icons.history,
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: serviceHistory.length,
-      itemBuilder: (context, index) {
-        final service = serviceHistory[index];
-        return _buildHistoryCard(
-          id: service['id'].toString(),
-          title: service['title'].toString(),
-          vehicle: service['vehicle'].toString(),
-          date: service['date'].toString(),
-          mileage: service['mileage'].toString(),
-          cost: service['cost'].toString(),
-          icon: service['icon'] as IconData,
-          iconColor: service['iconColor'] as Color,
-        );
-      },
-    );
-  }
-
-  Widget _buildRemindersTab() {
-    // Sample reminders
-    final reminders = [
-      {
-        'id': '7',
-        'title': 'Oil Change',
-        'vehicle': 'Toyota Corolla',
-        'interval': 'Every 5,000 km or 3 months',
-        'next': 'Due in 2 weeks',
-        'icon': Icons.oil_barrel,
-        'iconColor': Colors.amber,
-      },
-      {
-        'id': '8',
-        'title': 'Tire Rotation',
-        'vehicle': 'Honda City',
-        'interval': 'Every 10,000 km or 6 months',
-        'next': 'Due in 1 month',
-        'icon': Icons.tire_repair,
-        'iconColor': Colors.blue,
-      },
-      {
-        'id': '9',
-        'title': 'Registration Renewal',
-        'vehicle': 'Toyota Corolla',
-        'interval': 'Yearly',
-        'next': 'Due in 3 months',
-        'icon': Icons.how_to_reg,
-        'iconColor': Colors.green,
-      },
-    ];
-
-    if (reminders.isEmpty) {
-      return _buildEmptyState(
-        'No reminders set',
-        'You haven\'t set up any service reminders yet.',
-        Icons.notifications_none,
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: reminders.length,
-      itemBuilder: (context, index) {
-        final reminder = reminders[index];
-        return _buildReminderCard(
-          id: reminder['id'].toString(),
-          title: reminder['title'].toString(),
-          vehicle: reminder['vehicle'].toString(),
-          interval: reminder['interval'].toString(),
-          next: reminder['next'].toString(),
-          icon: reminder['icon'] as IconData,
-          iconColor: reminder['iconColor'] as Color,
-        );
-      },
-    );
-  }
-
-  Widget _buildServiceCard({
-    required String id,
-    required String title,
-    required String vehicle,
-    required String date,
-    required String status,
-    required bool urgent,
-    required IconData icon,
-    required Color iconColor,
-  }) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ServiceDetailScreen(serviceId: id),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: iconColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      icon,
-                      color: iconColor,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+              ? Center(child: Text(_errorMessage!))
+              : _vehicles.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('No vehicles found'),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pushNamed(context, AppRoutes.addVehicle),
+                            child: const Text('Add a Vehicle'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Column(
                       children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        // Vehicle selector
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          child: DropdownButtonFormField<VehicleModel>(
+                            decoration: const InputDecoration(
+                              labelText: 'Select Vehicle',
+                              border: OutlineInputBorder(),
+                            ),
+                            value: _selectedVehicle,
+                            items: _vehicles.map((vehicle) {
+                              return DropdownMenuItem(
+                                value: vehicle,
+                                child: Text(vehicle.name),
+                              );
+                            }).toList(),
+                            onChanged: (vehicle) {
+                              if (vehicle != null) {
+                                _selectVehicle(vehicle);
+                              }
+                            },
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          vehicle,
-                          style: const TextStyle(
-                            color: AppTheme.textSecondaryColor,
-                            fontSize: 14,
-                          ),
+                        
+                        // Service records list
+                        Expanded(
+                          child: _selectedVehicle == null
+                              ? const Center(child: Text('Select a vehicle'))
+                              : !_servicesByVehicle.containsKey(_selectedVehicle!.id!.toHexString())
+                                  ? const Center(child: CircularProgressIndicator())
+                                  : _servicesByVehicle[_selectedVehicle!.id!.toHexString()]!.isEmpty
+                                      ? Center(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Text('No service records found'),
+                                              const SizedBox(height: 16),
+                                              ElevatedButton(
+                                                onPressed: _addServiceRecord,
+                                                child: const Text('Add a Service Record'),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : RefreshIndicator(
+                                          onRefresh: () => _loadServicesForVehicle(_selectedVehicle!.id!.toHexString()),
+                                          child: ListView.builder(
+                                            padding: const EdgeInsets.all(8),
+                                            itemCount: _servicesByVehicle[_selectedVehicle!.id!.toHexString()]!.length,
+                                            itemBuilder: (context, index) {
+                                              final service = _servicesByVehicle[_selectedVehicle!.id!.toHexString()]![index];
+                                              return Card(
+                                                margin: const EdgeInsets.symmetric(vertical: 4),
+                                                child: ListTile(
+                                                  title: Text(service.title),
+                                                  subtitle: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(_dateFormat.format(service.serviceDate)),
+                                                      Text('\$${service.cost.toStringAsFixed(2)}'),
+                                                    ],
+                                                  ),
+                                                  trailing: service.serviceType != null
+                                                      ? Chip(label: Text(service.serviceType!))
+                                                      : null,
+                                                  onTap: () => _viewServiceDetail(service),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Scheduled Date',
-                        style: TextStyle(
-                          color: AppTheme.textSecondaryColor,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        date,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'Status',
-                        style: TextStyle(
-                          color: AppTheme.textSecondaryColor,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        status,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                          color: urgent ? AppTheme.accentRedColor : AppTheme.textPrimaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CustomButton(
-                    text: 'Reschedule',
-                    onPressed: () {
-                      // TODO: Implement reschedule
-                    },
-                    isOutlined: true,
-                    isFullWidth: false,
-                    height: 36,
-                  ),
-                  const SizedBox(width: 8),
-                  CustomButton(
-                    text: 'Mark Complete',
-                    onPressed: () {
-                      // TODO: Implement mark as complete
-                    },
-                    isFullWidth: false,
-                    height: 36,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHistoryCard({
-    required String id,
-    required String title,
-    required String vehicle,
-    required String date,
-    required String mileage,
-    required String cost,
-    required IconData icon,
-    required Color iconColor,
-  }) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ServiceDetailScreen(serviceId: id),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: iconColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      icon,
-                      color: iconColor,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          vehicle,
-                          style: const TextStyle(
-                            color: AppTheme.textSecondaryColor,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildHistoryDetail('Date', date),
-                  _buildHistoryDetail('Mileage', mileage),
-                  _buildHistoryDetail('Cost', cost, alignRight: true),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHistoryDetail(String label, String value, {bool alignRight = false}) {
-    return Column(
-      crossAxisAlignment: alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppTheme.textSecondaryColor,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildReminderCard({
-    required String id,
-    required String title,
-    required String vehicle,
-    required String interval,
-    required String next,
-    required IconData icon,
-    required Color iconColor,
-  }) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: iconColor,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        vehicle,
-                        style: const TextStyle(
-                          color: AppTheme.textSecondaryColor,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () {
-                    // TODO: Edit reminder
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Interval',
-                      style: TextStyle(
-                        color: AppTheme.textSecondaryColor,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      interval,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const Text(
-                      'Next',
-                      style: TextStyle(
-                        color: AppTheme.textSecondaryColor,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      next,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(String title, String message, IconData icon) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 72,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimaryColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                color: AppTheme.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 24),
-            CustomButton(
-              text: 'Add Service',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AddServiceRecordScreen()),
-                );
-              },
-              isFullWidth: false,
-              height: 44,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

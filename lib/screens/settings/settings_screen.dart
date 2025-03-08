@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:karvaan/theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
+  // Add const to constructor
   const SettingsScreen({Key? key}) : super(key: key);
 
   @override
@@ -279,7 +280,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const Divider(indent: 16, endIndent: 16),
         ListTile(
           title: const Text('App Version'),
-          subtitle: const Text('1.0.0 (build 1)'),
+          subtitle: const Text('1.1.0 (build 2)'),
           onTap: null,
         ),
       ],

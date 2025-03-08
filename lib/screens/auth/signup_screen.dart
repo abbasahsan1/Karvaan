@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:karvaan/theme/app_theme.dart';
-import 'package:karvaan/widgets/custom_button.dart';
+import 'package:karvaan/routes/app_routes.dart';
+import 'package:karvaan/services/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({Key? key}) : super(key: key);
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  _SignupScreenState createState() => _SignupScreenState();
 }
 
 class _SignupScreenState extends State<SignupScreen> {
@@ -16,9 +16,11 @@ class _SignupScreenState extends State<SignupScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  bool _isObscure = true;
-  bool _isObscureConfirm = true;
-  
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  final AuthService _authService = AuthService.instance;
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -29,10 +31,42 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _signup() {
+  Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: Implement actual signup logic
-      Navigator.pop(context); // Go back to login screen after signup
+      if (_passwordController.text != _confirmPasswordController.text) {
+        setState(() {
+          _errorMessage = 'Passwords do not match';
+        });
+        return;
+      }
+
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      try {
+        await _authService.register(
+          _emailController.text.trim(),
+          _passwordController.text,
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+        );
+        // Navigate to main screen after successful registration
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, AppRoutes.main);
+        }
+      } catch (e) {
+        setState(() {
+          _errorMessage = e.toString();
+        });
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
     }
   }
 
@@ -44,34 +78,36 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(16.0),
           child: Form(
             key: _formKey,
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Create Account',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimaryColor,
-                  ),
+                const SizedBox(height: 20),
+                Text(
+                  'Create an Account',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Please fill in the details to register',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textSecondaryColor,
+                const SizedBox(height: 30),
+                if (_errorMessage != null)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    color: Colors.red.shade100,
+                    child: Text(
+                      _errorMessage!,
+                      style: TextStyle(color: Colors.red.shade900),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 32),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    prefixIcon: Icon(Icons.person_outline),
+                    labelText: 'Name',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -86,15 +122,12 @@ class _SignupScreenState extends State<SignupScreen> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                     labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.email),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
-                    }
-                    // Simple email validation
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                      return 'Please enter a valid email';
                     }
                     return null;
                   },
@@ -104,33 +137,19 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(
-                    labelText: 'Phone Number',
-                    prefixIcon: Icon(Icons.phone_outlined),
+                    labelText: 'Phone',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.phone),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your phone number';
-                    }
-                    return null;
-                  },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
-                  obscureText: _isObscure,
-                  decoration: InputDecoration(
+                  obscureText: true,
+                  decoration: const InputDecoration(
                     labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isObscure ? Icons.visibility_off : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isObscure = !_isObscure;
-                        });
-                      },
-                    ),
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.lock),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -145,49 +164,39 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _confirmPasswordController,
-                  obscureText: _isObscureConfirm,
-                  decoration: InputDecoration(
+                  obscureText: true,
+                  decoration: const InputDecoration(
                     labelText: 'Confirm Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isObscureConfirm ? Icons.visibility_off : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isObscureConfirm = !_isObscureConfirm;
-                        });
-                      },
-                    ),
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.lock),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please confirm your password';
                     }
-                    if (value != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
                     return null;
                   },
                 ),
-                const SizedBox(height: 32),
-                CustomButton(
-                  text: 'Sign Up',
-                  onPressed: _signup,
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _register,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator()
+                      : const Text('Sign Up'),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      'Already have an account?',
-                      style: TextStyle(color: AppTheme.textSecondaryColor),
-                    ),
+                    const Text('Already have an account?'),
                     TextButton(
                       onPressed: () {
-                        Navigator.pop(context); // Go back to login
+                        Navigator.pushReplacementNamed(context, AppRoutes.login);
                       },
-                      child: const Text('Log In'),
+                      child: const Text('Login'),
                     ),
                   ],
                 ),

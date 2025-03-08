@@ -1,27 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:karvaan/navigation/app_navigation.dart';
-import 'package:karvaan/screens/analytics/analytics_dashboard.dart';
-import 'package:karvaan/screens/auth/forgot_password_screen.dart';
 import 'package:karvaan/screens/auth/login_screen.dart';
-import 'package:karvaan/screens/auth/signup_screen.dart';
-import 'package:karvaan/screens/fuel/add_fuel_entry_screen.dart';
-import 'package:karvaan/screens/fuel/fuel_history_screen.dart';
+import 'package:karvaan/screens/auth/register_screen.dart';
+import 'package:karvaan/navigation/app_navigation.dart';
+import 'package:karvaan/screens/auth/forgot_password_screen.dart';
 import 'package:karvaan/screens/home/home_screen.dart';
 import 'package:karvaan/screens/profile/profile_screen.dart';
-import 'package:karvaan/screens/services/add_service_record_screen.dart';
-import 'package:karvaan/screens/services/service_detail_screen.dart';
-import 'package:karvaan/screens/services/services_screen.dart';
 import 'package:karvaan/screens/settings/settings_screen.dart';
 import 'package:karvaan/screens/splash_screen.dart';
 import 'package:karvaan/screens/vehicles/add_vehicle_screen.dart';
 import 'package:karvaan/screens/vehicles/vehicle_detail_screen.dart';
-import 'package:karvaan/screens/vehicles/vehicles_list_screen.dart';
 
 class AppRoutes {
   // Route names
   static const String splash = '/';
   static const String login = '/login';
-  static const String signup = '/signup';
+  static const String register = '/signup';
   static const String forgotPassword = '/forgot-password';
   static const String home = '/home';
   static const String main = '/main';
@@ -34,8 +27,9 @@ class AppRoutes {
   static const String addFuel = '/add-fuel';
   static const String fuelHistory = '/fuel-history';
   static const String analytics = '/analytics';
-  static const String settings = '/settings';
+  static const String settingsRoute = '/settings'; // Changed name here
   static const String profile = '/profile';
+  static const String changePassword = '/change-password';
 
   // Route generator
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -43,75 +37,48 @@ class AppRoutes {
       case splash:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
       case login:
+        // Check if we have a message to pass to the login screen
+        if (settings.arguments is Map<String, dynamic>) {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (_) => LoginScreen(
+              message: args['message'] as String?,
+            ),
+          );
+        }
         return MaterialPageRoute(builder: (_) => const LoginScreen());
-      case signup:
-        return MaterialPageRoute(builder: (_) => const SignupScreen());
+      case register:
+        return MaterialPageRoute(builder: (_) => const RegisterScreen());
       case forgotPassword:
         return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
       case main:
+        // Return the AppNavigation widget for the main route
         return MaterialPageRoute(builder: (_) => const AppNavigation());
       case home:
-        return MaterialPageRoute(builder: (_) => const HomeScreen());
+        return MaterialPageRoute(builder: (_) => const AppNavigation(initialIndex: 0));
       case addVehicle:
-        final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
-          builder: (_) => AddVehicleScreen(
-            existingVehicle: args?['existingVehicle'],
-          ),
+          builder: (_) => const AddVehicleScreen(),
         );
       case vehicleDetail:
         final args = settings.arguments as Map<String, dynamic>;
         return MaterialPageRoute(
           builder: (_) => VehicleDetailScreen(
-            vehicleName: args['vehicleName'],
-            registrationNumber: args['registrationNumber'],
+            vehicleName: args['vehicleName'] as String,
+            registrationNumber: args['registrationNumber'] as String,
           ),
         );
-      case vehiclesList:
-        return MaterialPageRoute(builder: (_) => const VehiclesListScreen());
-      case addService:
-        final args = settings.arguments as Map<String, dynamic>?;
-        return MaterialPageRoute(
-          builder: (_) => AddServiceRecordScreen(
-            existingService: args?['existingService'],
-            vehicleId: args?['vehicleId'],
-          ),
-        );
-      case serviceDetail:
-        final args = settings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
-          builder: (_) => ServiceDetailScreen(
-            serviceId: args['serviceId'],
-          ),
-        );
-      case services:
-        return MaterialPageRoute(builder: (_) => const ServicesScreen());
-      case addFuel:
-        final args = settings.arguments as Map<String, dynamic>?;
-        return MaterialPageRoute(
-          builder: (_) => AddFuelEntryScreen(
-            existingEntry: args?['existingEntry'],
-            vehicleId: args?['vehicleId'],
-          ),
-        );
-      case fuelHistory:
-        final args = settings.arguments as Map<String, dynamic>?;
-        return MaterialPageRoute(
-          builder: (_) => FuelHistoryScreen(
-            vehicleId: args?['vehicleId'],
-          ),
-        );
-      case analytics:
-        return MaterialPageRoute(builder: (_) => const AnalyticsDashboard());
-      case AppRoutes.settings: // Fixed: Use the constant AppRoutes.settings instead of the variable settings
-        return MaterialPageRoute(builder: (_) => const SettingsScreen());
       case profile:
-        return MaterialPageRoute(builder: (_) => const ProfileScreen());
+        return MaterialPageRoute(builder: (_) => const AppNavigation(initialIndex: 3));
+      case settingsRoute: // Changed name here
+        return MaterialPageRoute(builder: (_) => const SettingsScreen());
       default:
+        // For routes that aren't implemented yet, just show a placeholder
         return MaterialPageRoute(
           builder: (_) => Scaffold(
+            appBar: AppBar(title: Text(settings.name ?? 'Unknown Screen')),
             body: Center(
-              child: Text('No route defined for ${settings.name}'),
+              child: Text('Route ${settings.name} not implemented yet'),
             ),
           ),
         );

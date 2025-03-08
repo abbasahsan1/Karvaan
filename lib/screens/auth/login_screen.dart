@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:karvaan/navigation/app_navigation.dart';
-import 'package:karvaan/screens/auth/signup_screen.dart';
-import 'package:karvaan/screens/auth/forgot_password_screen.dart';
+import 'package:karvaan/routes/app_routes.dart';
+import 'package:karvaan/providers/user_provider.dart';
 import 'package:karvaan/theme/app_theme.dart';
 import 'package:karvaan/widgets/custom_button.dart';
+import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  final String? message;  // Added to display messages (like signup success)
+  
+  const LoginScreen({Key? key, this.message}) : super(key: key);
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -16,7 +18,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isObscure = true;
+  bool _obscurePassword = true;
+  bool _rememberMe = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -25,18 +29,37 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: Implement actual login logic
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AppNavigation())
+      setState(() {
+        _errorMessage = null;
+      });
+
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final success = await userProvider.login(
+        _emailController.text.trim(),
+        _passwordController.text,
       );
+
+      if (success) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, AppRoutes.main);
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage = userProvider.error ?? 'Login failed. Please try again.';
+          });
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Access the user provider
+    final userProvider = Provider.of<UserProvider>(context);
+    
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -48,64 +71,112 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 40),
-                // Logo placeholder
-                const Icon(
-                  Icons.directions_car,
-                  color: AppTheme.primaryColor,
-                  size: 64,
+                
+                // App logo
+                Center(
+                  child: Icon(
+                    Icons.directions_car,
+                    size: 80,
+                    color: AppTheme.primaryColor,
+                  ),
                 ),
+                
                 const SizedBox(height: 24),
-                const Text(
-                  'Welcome Back',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimaryColor,
+                
+                // App name
+                Center(
+                  child: Text(
+                    'Karvaan',
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Log in to your account',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AppTheme.textSecondaryColor,
+                
+                const SizedBox(height: 40),
+                
+                // Success message if coming from signup
+                if (widget.message != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green),
+                    ),
+                    child: Text(
+                      widget.message!,
+                      style: TextStyle(color: Colors.green.shade700),
+                    ),
                   ),
-                  textAlign: TextAlign.center,
+                
+                // Error message if login fails
+                if (_errorMessage != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red),
+                    ),
+                    child: Text(
+                      _errorMessage!,
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                  ),
+                
+                // Login form
+                Text(
+                  'Login',
+                  style: Theme.of(context).textTheme.headlineMedium,
                 ),
-                const SizedBox(height: 48),
+                
+                const SizedBox(height: 24),
+                
+                // Email field
                 TextFormField(
                   controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                     labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
+                    hintText: 'Enter your email',
+                    prefixIcon: Icon(Icons.email),
                   ),
+                  keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
                     }
+                    if (!value.contains('@') || !value.contains('.')) {
+                      return 'Please enter a valid email';
+                    }
                     return null;
                   },
                 ),
+                
                 const SizedBox(height: 16),
+                
+                // Password field
                 TextFormField(
                   controller: _passwordController,
-                  obscureText: _isObscure,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    hintText: 'Enter your password',
+                    prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isObscure ? Icons.visibility_off : Icons.visibility,
+                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
                       ),
                       onPressed: () {
                         setState(() {
-                          _isObscure = !_isObscure;
+                          _obscurePassword = !_obscurePassword;
                         });
                       },
                     ),
                   ),
+                  obscureText: _obscurePassword,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
@@ -113,38 +184,50 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const ForgotPasswordScreen())
-                      );
-                    },
-                    child: const Text('Forgot Password?'),
-                  ),
+                
+                const SizedBox(height: 8),
+                
+                // Remember me & Forgot password
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _rememberMe,
+                      onChanged: (value) {
+                        setState(() {
+                          _rememberMe = value ?? false;
+                        });
+                      },
+                    ),
+                    const Text('Remember me'),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, AppRoutes.forgotPassword);
+                      },
+                      child: const Text('Forgot Password?'),
+                    ),
+                  ],
                 ),
+                
                 const SizedBox(height: 24),
+                
+                // Login button
                 CustomButton(
-                  text: 'Log In',
-                  onPressed: _login,
+                  text: 'Login',
+                  onPressed: userProvider.isLoading ? null : _login,
+                  isLoading: userProvider.isLoading,
                 ),
+                
                 const SizedBox(height: 24),
+                
+                // Sign up link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      'Don\'t have an account?',
-                      style: TextStyle(color: AppTheme.textSecondaryColor),
-                    ),
+                    const Text("Don't have an account?"),
                     TextButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const SignupScreen())
-                        );
+                        Navigator.pushNamed(context, AppRoutes.register);
                       },
                       child: const Text('Sign Up'),
                     ),

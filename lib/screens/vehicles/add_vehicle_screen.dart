@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:karvaan/theme/app_theme.dart';
-import 'package:karvaan/widgets/custom_button.dart';
+import 'package:karvaan/models/vehicle_model.dart';
+import 'package:karvaan/services/vehicle_service.dart';
 
 class AddVehicleScreen extends StatefulWidget {
-  final Map<String, dynamic>? existingVehicle; // For editing an existing vehicle, null for new
+  final VehicleModel? existingVehicle;
 
-  const AddVehicleScreen({
-    Key? key,
-    this.existingVehicle,
-  }) : super(key: key);
+  const AddVehicleScreen({Key? key, this.existingVehicle}) : super(key: key);
 
   @override
   State<AddVehicleScreen> createState() => _AddVehicleScreenState();
@@ -16,142 +13,106 @@ class AddVehicleScreen extends StatefulWidget {
 
 class _AddVehicleScreenState extends State<AddVehicleScreen> {
   final _formKey = GlobalKey<FormState>();
-  
-  // Form controllers
+  final _nameController = TextEditingController();
+  final _registrationController = TextEditingController();
   final _makeController = TextEditingController();
   final _modelController = TextEditingController();
   final _yearController = TextEditingController();
-  final _registrationController = TextEditingController();
   final _colorController = TextEditingController();
-  final _engineSizeController = TextEditingController();
-  final _odometerController = TextEditingController();
-  final _purchaseDateController = TextEditingController();
-  final _purchasePriceController = TextEditingController();
+  final _mileageController = TextEditingController();
+  bool _isLoading = false;
 
-  String? _selectedFuelType;
-  String? _selectedTransmission;
-  DateTime? _selectedPurchaseDate;
-
-  final List<String> _fuelTypes = ['Petrol', 'Diesel', 'Hybrid', 'Electric', 'CNG'];
-  final List<String> _transmissionTypes = ['Manual', 'Automatic', 'CVT', 'Semi-Automatic'];
+  final VehicleService _vehicleService = VehicleService.instance;
 
   @override
   void initState() {
     super.initState();
-    // If editing, populate the form with existing vehicle data
     if (widget.existingVehicle != null) {
-      _populateForm();
+      _nameController.text = widget.existingVehicle!.name;
+      _registrationController.text = widget.existingVehicle!.registrationNumber;
+      _makeController.text = widget.existingVehicle!.make ?? '';
+      _modelController.text = widget.existingVehicle!.model ?? '';
+      _yearController.text = widget.existingVehicle!.year?.toString() ?? '';
+      _colorController.text = widget.existingVehicle!.color ?? '';
+      _mileageController.text = widget.existingVehicle!.mileage?.toString() ?? '';
     }
-  }
-
-  void _populateForm() {
-    final vehicle = widget.existingVehicle!;
-    _makeController.text = vehicle['make'] ?? '';
-    _modelController.text = vehicle['model'] ?? '';
-    _yearController.text = vehicle['year'] ?? '';
-    _registrationController.text = vehicle['registration'] ?? '';
-    _colorController.text = vehicle['color'] ?? '';
-    _engineSizeController.text = vehicle['engineSize'] ?? '';
-    _odometerController.text = vehicle['odometer']?.toString().replaceAll(' km', '') ?? '';
-    _selectedFuelType = vehicle['fuelType'];
-    _selectedTransmission = vehicle['transmission'];
-    _purchasePriceController.text = vehicle['purchasePrice']?.toString().replaceAll('Rs. ', '').replaceAll(',', '') ?? '';
-    
-    // Handle purchase date
-    if (vehicle['purchaseDate'] != null) {
-      final dateParts = vehicle['purchaseDate'].toString().split(' ');
-      if (dateParts.length == 3) {
-        final month = _getMonthNumber(dateParts[0]);
-        final day = int.parse(dateParts[1].replaceAll(',', ''));
-        final year = int.parse(dateParts[2]);
-        _selectedPurchaseDate = DateTime(year, month, day);
-        _purchaseDateController.text = '${dateParts[0]} ${dateParts[1]} ${dateParts[2]}';
-      }
-    }
-  }
-
-  int _getMonthNumber(String month) {
-    final months = {
-      'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
-      'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
-    };
-    return months[month] ?? 1;
   }
 
   @override
   void dispose() {
+    _nameController.dispose();
+    _registrationController.dispose();
     _makeController.dispose();
     _modelController.dispose();
     _yearController.dispose();
-    _registrationController.dispose();
     _colorController.dispose();
-    _engineSizeController.dispose();
-    _odometerController.dispose();
-    _purchaseDateController.dispose();
-    _purchasePriceController.dispose();
+    _mileageController.dispose();
     super.dispose();
   }
 
-  Future<void> _selectPurchaseDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedPurchaseDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null && picked != _selectedPurchaseDate) {
-      setState(() {
-        _selectedPurchaseDate = picked;
-        _purchaseDateController.text = '${_getMonthName(picked.month)} ${picked.day}, ${picked.year}';
-      });
-    }
-  }
-
-  String _getMonthName(int month) {
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    return months[month - 1];
-  }
-
-  void _saveVehicle() {
+  Future<void> _saveVehicle() async {
     if (_formKey.currentState!.validate()) {
-      // Create vehicle object
-      final vehicle = {
-        'make': _makeController.text,
-        'model': _modelController.text,
-        'year': _yearController.text,
-        'registration': _registrationController.text,
-        'color': _colorController.text,
-        'fuelType': _selectedFuelType,
-        'transmission': _selectedTransmission,
-        'engineSize': _engineSizeController.text,
-        'odometer': '${_odometerController.text} km',
-        'purchaseDate': _purchaseDateController.text,
-        'purchasePrice': 'Rs. ${_purchasePriceController.text}',
-      };
-      
-      // Success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vehicle saved successfully'),
-          backgroundColor: AppTheme.primaryColor,
-        ),
-      );
-      
-      // Return to previous screen
-      Navigator.pop(context, vehicle);
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final int? year = _yearController.text.isNotEmpty 
+            ? int.tryParse(_yearController.text) 
+            : null;
+        final int? mileage = _mileageController.text.isNotEmpty 
+            ? int.tryParse(_mileageController.text) 
+            : null;
+
+        if (widget.existingVehicle == null) {
+          // Add new vehicle
+          await _vehicleService.addVehicle(
+            name: _nameController.text,
+            registrationNumber: _registrationController.text,
+            make: _makeController.text.isNotEmpty ? _makeController.text : null,
+            model: _modelController.text.isNotEmpty ? _modelController.text : null,
+            year: year,
+            color: _colorController.text.isNotEmpty ? _colorController.text : null,
+            mileage: mileage,
+          );
+        } else {
+          // Update existing vehicle
+          final updatedVehicle = widget.existingVehicle!.copyWith(
+            name: _nameController.text,
+            registrationNumber: _registrationController.text,
+            make: _makeController.text.isNotEmpty ? _makeController.text : null,
+            model: _modelController.text.isNotEmpty ? _modelController.text : null,
+            year: year,
+            color: _colorController.text.isNotEmpty ? _colorController.text : null,
+            mileage: mileage,
+          );
+          
+          await _vehicleService.updateVehicle(updatedVehicle);
+        }
+
+        // Pop back to previous screen
+        if (mounted) {
+          Navigator.of(context).pop(true); // Return true to indicate success
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.existingVehicle != null;
-    
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Vehicle' : 'Add Vehicle'),
+        title: Text(widget.existingVehicle == null ? 'Add Vehicle' : 'Edit Vehicle'),
       ),
       body: Form(
         key: _formKey,
@@ -160,253 +121,87 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildBasicInfoSection(),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Vehicle Name *',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter vehicle name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _registrationController,
+                decoration: const InputDecoration(
+                  labelText: 'Registration Number *',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter registration number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _makeController,
+                decoration: const InputDecoration(
+                  labelText: 'Make',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _modelController,
+                decoration: const InputDecoration(
+                  labelText: 'Model',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _yearController,
+                decoration: const InputDecoration(
+                  labelText: 'Year',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _colorController,
+                decoration: const InputDecoration(
+                  labelText: 'Color',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _mileageController,
+                decoration: const InputDecoration(
+                  labelText: 'Mileage',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 24),
-              _buildTechnicalInfoSection(),
-              const SizedBox(height: 24),
-              _buildPurchaseInfoSection(),
-              const SizedBox(height: 32),
-              CustomButton(
-                text: isEditing ? 'Update Vehicle' : 'Add Vehicle',
-                onPressed: _saveVehicle,
+              ElevatedButton(
+                onPressed: _isLoading ? null : _saveVehicle,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: _isLoading
+                    ? const CircularProgressIndicator()
+                    : Text(widget.existingVehicle == null ? 'Add Vehicle' : 'Save Changes'),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBasicInfoSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Basic Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _makeController,
-              decoration: const InputDecoration(
-                labelText: 'Make',
-                hintText: 'e.g. Toyota, Honda',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter the vehicle make';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _modelController,
-              decoration: const InputDecoration(
-                labelText: 'Model',
-                hintText: 'e.g. Corolla, Civic',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter the vehicle model';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _yearController,
-              decoration: const InputDecoration(
-                labelText: 'Year',
-                hintText: 'e.g. 2020',
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter the vehicle year';
-                }
-                if (int.tryParse(value) == null) {
-                  return 'Please enter a valid year';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _registrationController,
-              decoration: const InputDecoration(
-                labelText: 'Registration Number',
-                hintText: 'e.g. ABC-123',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter the registration number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _colorController,
-              decoration: const InputDecoration(
-                labelText: 'Color',
-                hintText: 'e.g. White, Black, Silver',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTechnicalInfoSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Technical Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Fuel Type',
-              ),
-              value: _selectedFuelType,
-              items: _fuelTypes.map((String type) {
-                return DropdownMenuItem<String>(
-                  value: type,
-                  child: Text(type),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedFuelType = newValue;
-                });
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select a fuel type';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Transmission',
-              ),
-              value: _selectedTransmission,
-              items: _transmissionTypes.map((String type) {
-                return DropdownMenuItem<String>(
-                  value: type,
-                  child: Text(type),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedTransmission = newValue;
-                });
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select a transmission type';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _engineSizeController,
-              decoration: const InputDecoration(
-                labelText: 'Engine Size (cc)',
-                hintText: 'e.g. 1800',
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _odometerController,
-              decoration: const InputDecoration(
-                labelText: 'Current Odometer (km)',
-                hintText: 'e.g. 15000',
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter the current odometer reading';
-                }
-                if (int.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPurchaseInfoSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Purchase Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _purchaseDateController,
-              decoration: const InputDecoration(
-                labelText: 'Purchase Date',
-                hintText: 'Select date',
-                suffixIcon: Icon(Icons.calendar_today),
-              ),
-              readOnly: true,
-              onTap: _selectPurchaseDate,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _purchasePriceController,
-              decoration: const InputDecoration(
-                labelText: 'Purchase Price (Rs.)',
-                hintText: 'e.g. 2500000',
-              ),
-              keyboardType: TextInputType.number,
-            ),
-          ],
         ),
       ),
     );

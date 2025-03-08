@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:karvaan/theme/app_theme.dart';
-import 'package:karvaan/widgets/custom_button.dart';
+import 'package:intl/intl.dart';
+import 'package:karvaan/models/fuel_entry_model.dart';
+import 'package:karvaan/services/fuel_entry_service.dart';
 
 class AddFuelEntryScreen extends StatefulWidget {
-  final Map<String, dynamic>? existingEntry; // For editing an existing entry, null for new
-  final String? vehicleId; // If coming from a specific vehicle, this will be set
+  final FuelEntryModel? existingEntry;
+  final String? vehicleId;
 
   const AddFuelEntryScreen({
     Key? key,
@@ -18,159 +19,125 @@ class AddFuelEntryScreen extends StatefulWidget {
 
 class _AddFuelEntryScreenState extends State<AddFuelEntryScreen> {
   final _formKey = GlobalKey<FormState>();
-  
-  // Form controllers
-  final _dateController = TextEditingController();
-  final _odometerController = TextEditingController();
-  final _fuelAmountController = TextEditingController();
-  final _fuelCostController = TextEditingController();
-  final _totalCostController = TextEditingController();
+  final _quantityController = TextEditingController();
+  final _costController = TextEditingController();
+  final _mileageController = TextEditingController();
   final _notesController = TextEditingController();
+  DateTime _selectedDate = DateTime.now();
+  String _selectedFuelType = 'Petrol';
+  bool _fullTank = true;
+  bool _isLoading = false;
 
-  String? _selectedVehicle;
-  String? _selectedFuelType;
-  DateTime? _selectedDate;
-  bool _isFillUp = true;
-
-  // Mock data for dropdowns
-  final List<String> _vehicles = ['Toyota Corolla', 'Honda City', 'Suzuki Alto'];
-  final List<String> _fuelTypes = ['Petrol', 'Diesel', 'CNG', 'Electric'];
+  final List<String> _fuelTypes = ['Petrol', 'Diesel', 'Electric', 'CNG', 'LPG', 'Other'];
+  final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
+  final FuelEntryService _fuelEntryService = FuelEntryService.instance;
 
   @override
   void initState() {
     super.initState();
-    // If vehicle ID is provided, set the selected vehicle
-    if (widget.vehicleId != null) {
-      // In a real app, you would look up the vehicle name from the ID
-      _selectedVehicle = _vehicles.first;
+    if (widget.existingEntry != null) {
+      _quantityController.text = widget.existingEntry!.quantity.toString();
+      _costController.text = widget.existingEntry!.cost.toString();
+      _mileageController.text = widget.existingEntry!.mileage?.toString() ?? '';
+      _notesController.text = widget.existingEntry!.notes ?? '';
+      _selectedDate = widget.existingEntry!.date;
+      _selectedFuelType = widget.existingEntry!.fuelType ?? 'Petrol';
+      _fullTank = widget.existingEntry!.fullTank;
     }
-
-    // Set default date to today
-    _selectedDate = DateTime.now();
-    _dateController.text = _formatDate(_selectedDate!);
-  }
-
-  String _formatDate(DateTime date) {
-    return "${_getMonthName(date.month)} ${date.day}, ${date.year}";
-  }
-
-  String _getMonthName(int month) {
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    return months[month - 1];
   }
 
   @override
   void dispose() {
-    _dateController.dispose();
-    _odometerController.dispose();
-    _fuelAmountController.dispose();
-    _fuelCostController.dispose();
-    _totalCostController.dispose();
+    _quantityController.dispose();
+    _costController.dispose();
+    _mileageController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
-  void _populateForm() {
-    if (widget.existingEntry == null) return;
-
-    final entry = widget.existingEntry!;
-    _selectedVehicle = entry['vehicle'];
-    _selectedFuelType = entry['fuelType'];
-    _isFillUp = entry['isFillUp'] ?? true;
-    
-    _odometerController.text = entry['odometer']?.toString().replaceAll(' km', '') ?? '';
-    _fuelAmountController.text = entry['fuelAmount']?.toString().replaceAll(' L', '') ?? '';
-    _fuelCostController.text = entry['fuelCost']?.toString().replaceAll('Rs. ', '').replaceAll('/L', '') ?? '';
-    _totalCostController.text = entry['totalCost']?.toString().replaceAll('Rs. ', '') ?? '';
-    _notesController.text = entry['notes'] ?? '';
-    
-    // Handle date
-    if (entry['date'] != null) {
-      final dateParts = entry['date'].toString().split(' ');
-      if (dateParts.length >= 3) {
-        final month = _getMonthNumber(dateParts[0]);
-        final day = int.parse(dateParts[1].replaceAll(',', ''));
-        final year = int.parse(dateParts[2]);
-        _selectedDate = DateTime(year, month, day);
-        _dateController.text = entry['date'];
-      }
-    }
-  }
-
-  int _getMonthNumber(String month) {
-    final months = {
-      'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
-      'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
-    };
-    return months[month] ?? 1;
-  }
-
   Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
+    final DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
+      initialDate: _selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
     );
-    if (picked != null && picked != _selectedDate) {
+
+    if (pickedDate != null && pickedDate != _selectedDate) {
       setState(() {
-        _selectedDate = picked;
-        _dateController.text = _formatDate(picked);
+        _selectedDate = pickedDate;
       });
     }
   }
 
-  void _calculateTotalCost() {
-    if (_fuelAmountController.text.isNotEmpty && _fuelCostController.text.isNotEmpty) {
-      try {
-        final amount = double.parse(_fuelAmountController.text);
-        final costPerLiter = double.parse(_fuelCostController.text);
-        final total = amount * costPerLiter;
-        _totalCostController.text = total.toStringAsFixed(2);
-      } catch (e) {
-        // Error in calculation, leave the field as is
-      }
-    }
-  }
-
-  void _saveFuelEntry() {
+  Future<void> _saveFuelEntry() async {
     if (_formKey.currentState!.validate()) {
-      // Create fuel entry object
-      final fuelEntry = {
-        'vehicle': _selectedVehicle,
-        'date': _dateController.text,
-        'fuelType': _selectedFuelType,
-        'odometer': '${_odometerController.text} km',
-        'fuelAmount': '${_fuelAmountController.text} L',
-        'fuelCost': 'Rs. ${_fuelCostController.text}/L',
-        'totalCost': 'Rs. ${_totalCostController.text}',
-        'isFillUp': _isFillUp,
-        'notes': _notesController.text,
-      };
-      
-      // Success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Fuel entry saved successfully'),
-          backgroundColor: AppTheme.primaryColor,
-        ),
-      );
-      
-      // Return to previous screen
-      Navigator.pop(context, fuelEntry);
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final double quantity = double.parse(_quantityController.text);
+        final double cost = double.parse(_costController.text);
+        final int? mileage = _mileageController.text.isNotEmpty 
+            ? int.tryParse(_mileageController.text) 
+            : null;
+
+        final String vehicleId = widget.vehicleId ?? 
+            (widget.existingEntry != null 
+                ? widget.existingEntry!.vehicleId.toHexString() 
+                : throw Exception('Vehicle ID is required'));
+
+        if (widget.existingEntry == null) {
+          // Add new fuel entry
+          await _fuelEntryService.addFuelEntry(
+            vehicleId: vehicleId,
+            date: _selectedDate,
+            quantity: quantity,
+            cost: cost,
+            mileage: mileage,
+            fuelType: _selectedFuelType,
+            fullTank: _fullTank,
+            notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+          );
+        } else {
+          // Update existing fuel entry
+          final updatedEntry = widget.existingEntry!.copyWith(
+            date: _selectedDate,
+            quantity: quantity,
+            cost: cost,
+            mileage: mileage,
+            fuelType: _selectedFuelType,
+            fullTank: _fullTank,
+            notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+          );
+          
+          await _fuelEntryService.updateFuelEntry(updatedEntry);
+        }
+
+        // Pop back to previous screen
+        if (mounted) {
+          Navigator.of(context).pop(true); // Return true to indicate success
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.existingEntry != null;
-    
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Fuel Entry' : 'Add Fuel Entry'),
+        title: Text(widget.existingEntry == null ? 'Add Fuel Entry' : 'Edit Fuel Entry'),
       ),
       body: Form(
         key: _formKey,
@@ -179,280 +146,131 @@ class _AddFuelEntryScreenState extends State<AddFuelEntryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildBasicInfoSection(),
+              // Date Picker Field
+              InkWell(
+                onTap: _selectDate,
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Date *',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                  child: Text(_dateFormat.format(_selectedDate)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Quantity Field
+              TextFormField(
+                controller: _quantityController,
+                decoration: const InputDecoration(
+                  labelText: 'Quantity (liters) *',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter quantity';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // Cost Field
+              TextFormField(
+                controller: _costController,
+                decoration: const InputDecoration(
+                  labelText: 'Total Cost *',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter cost';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // Mileage Field
+              TextFormField(
+                controller: _mileageController,
+                decoration: const InputDecoration(
+                  labelText: 'Odometer Reading (km)',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              
+              // Fuel Type Dropdown
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: 'Fuel Type',
+                  border: OutlineInputBorder(),
+                ),
+                value: _selectedFuelType,
+                items: _fuelTypes.map((type) {
+                  return DropdownMenuItem(
+                    value: type,
+                    child: Text(type),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedFuelType = value;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // Full Tank Checkbox
+              CheckboxListTile(
+                title: const Text('Full Tank'),
+                value: _fullTank,
+                onChanged: (bool? value) {
+                  if (value != null) {
+                    setState(() {
+                      _fullTank = value;
+                    });
+                  }
+                },
+                contentPadding: EdgeInsets.zero,
+              ),
+              
+              // Notes Field
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
               const SizedBox(height: 24),
-              _buildFuelDetailsSection(),
-              const SizedBox(height: 24),
-              _buildCostSection(),
-              const SizedBox(height: 24),
-              _buildNotesSection(),
-              const SizedBox(height: 32),
-              CustomButton(
-                text: isEditing ? 'Update Fuel Entry' : 'Save Fuel Entry',
-                onPressed: _saveFuelEntry,
+              
+              // Save Button
+              ElevatedButton(
+                onPressed: _isLoading ? null : _saveFuelEntry,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: _isLoading
+                    ? const CircularProgressIndicator()
+                    : Text(widget.existingEntry == null ? 'Add Entry' : 'Save Changes'),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBasicInfoSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Basic Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Vehicle',
-              ),
-              value: _selectedVehicle,
-              items: _vehicles.map((String vehicle) {
-                return DropdownMenuItem<String>(
-                  value: vehicle,
-                  child: Text(vehicle),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedVehicle = newValue;
-                });
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select a vehicle';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _dateController,
-              decoration: const InputDecoration(
-                labelText: 'Date',
-                hintText: 'Select date',
-                suffixIcon: Icon(Icons.calendar_today),
-              ),
-              readOnly: true,
-              onTap: _selectDate,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select a date';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _odometerController,
-              decoration: const InputDecoration(
-                labelText: 'Odometer Reading (km)',
-                hintText: 'e.g. 15000',
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter the odometer reading';
-                }
-                if (int.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFuelDetailsSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Fuel Details',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Fuel Type',
-              ),
-              value: _selectedFuelType,
-              items: _fuelTypes.map((String type) {
-                return DropdownMenuItem<String>(
-                  value: type,
-                  child: Text(type),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedFuelType = newValue;
-                });
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select a fuel type';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _fuelAmountController,
-              decoration: const InputDecoration(
-                labelText: 'Fuel Amount (L)',
-                hintText: 'e.g. 35',
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              onChanged: (_) => _calculateTotalCost(),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter the amount of fuel';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Switch(
-                  value: _isFillUp,
-                  activeColor: AppTheme.primaryColor,
-                  onChanged: (value) {
-                    setState(() {
-                      _isFillUp = value;
-                    });
-                  },
-                ),
-                const SizedBox(width: 8),
-                const Text('Complete Fill Up'),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCostSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Cost Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _fuelCostController,
-              decoration: const InputDecoration(
-                labelText: 'Fuel Cost (Rs. per liter)',
-                hintText: 'e.g. 200',
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              onChanged: (_) => _calculateTotalCost(),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter the cost per liter';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _totalCostController,
-              decoration: const InputDecoration(
-                labelText: 'Total Cost (Rs.)',
-                hintText: 'e.g. 7000',
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter the total cost';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotesSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Notes',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Additional Notes (Optional)',
-                hintText: 'Any additional information about this fuel entry',
-              ),
-              maxLines: 3,
-            ),
-          ],
         ),
       ),
     );

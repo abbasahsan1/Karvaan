@@ -1,5 +1,5 @@
 name: karvaan
-description: "A new Flutter project."
+description: "A vehicle management application."
 publish_to: 'none'
 version: 0.1.0
 
@@ -9,11 +9,46 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Database & Storage
+  mongo_dart: ^0.9.3
+  shared_preferences: ^2.2.2
+  
+  # State Management
+  provider: ^6.0.5  # Ensure this line is present and correct
+  
+  # UI & Formatting
+  intl: ^0.18.1
+  cupertino_icons: ^1.0.6
+  flutter_svg: ^2.0.9
+  google_fonts: ^6.1.0
+  
+  # Functionality
+  http: ^1.1.0
+  path_provider: ^2.1.1
+  url_launcher: ^6.2.1
+  
+  # Data Visualization
+  fl_chart: ^0.65.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
+  
+  # Note: Assets commented out until directories are created
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/
+  
+  # Note: Using Google Fonts package instead of local fonts
+  # fonts:
+  #   - family: Poppins
+  #     fonts:
+  #       - asset: assets/fonts/Poppins-Regular.ttf
+  #       - asset: assets/fonts/Poppins-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/Poppins-Bold.ttf
+  #         weight: 700

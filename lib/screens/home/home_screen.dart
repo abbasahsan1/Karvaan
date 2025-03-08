@@ -1,59 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:karvaan/providers/user_provider.dart';
 import 'package:karvaan/theme/app_theme.dart';
 import 'package:karvaan/widgets/custom_button.dart';
 import 'package:karvaan/screens/vehicles/vehicle_detail_screen.dart';
 import 'package:karvaan/screens/vehicles/add_vehicle_screen.dart';
+import 'package:provider/provider.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {
-            Scaffold.of(context).openDrawer();
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () {
-              // TODO: Navigate to notifications
-            },
+    // Access user provider to get current user data
+    final userProvider = Provider.of<UserProvider>(context);
+    
+    return Column(
+      children: [
+        // Home screen content here
+        // No AppBar in this widget since the parent (AppNavigation) provides it
+        Expanded(
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Greeting with dynamic user name
+                  Text(
+                    'Hi ${userProvider.displayName}',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  
+                  Text(
+                    'Welcome to Karvaan',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppTheme.textSecondaryColor,
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  _buildQuickStats(),
+                  const SizedBox(height: 24),
+                  _buildMyVehiclesSection(context),
+                  const SizedBox(height: 24),
+                  _buildUpcomingMaintenanceSection(),
+                ],
+              ),
+            ),
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildWelcomeSection(),
-              const SizedBox(height: 24),
-              _buildQuickStats(),
-              const SizedBox(height: 24),
-              _buildMyVehiclesSection(context),
-              const SizedBox(height: 24),
-              _buildUpcomingMaintenanceSection(),
-            ],
-          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppTheme.primaryColor,
-        child: const Icon(Icons.add),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddVehicleScreen()),
-          );
-        },
-      ),
+      ],
     );
   }
 

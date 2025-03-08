@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:karvaan/theme/app_theme.dart';
-import 'package:karvaan/widgets/custom_button.dart';
+import 'package:intl/intl.dart';
+import 'package:karvaan/models/service_model.dart';
+import 'package:karvaan/services/service_record_service.dart';
 
 class AddServiceRecordScreen extends StatefulWidget {
-  final Map<String, dynamic>? existingService; // For editing an existing service, null for new
-  final String? vehicleId; // If coming from a specific vehicle, this will be set
+  final ServiceModel? existingService;
+  final String? vehicleId;
 
   const AddServiceRecordScreen({
     Key? key,
@@ -18,163 +19,149 @@ class AddServiceRecordScreen extends StatefulWidget {
 
 class _AddServiceRecordScreenState extends State<AddServiceRecordScreen> {
   final _formKey = GlobalKey<FormState>();
-  
-  // Form controllers
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _serviceProviderController = TextEditingController();
-  final _serviceDateController = TextEditingController();
-  final _odometerController = TextEditingController();
   final _costController = TextEditingController();
-  final _notesController = TextEditingController();
+  final _mileageController = TextEditingController();
+  final _partsController = TextEditingController(); // Comma-separated list
+  DateTime _selectedDate = DateTime.now();
+  String _selectedServiceType = 'Regular Maintenance';
+  bool _isLoading = false;
 
-  String? _selectedVehicle;
-  String? _selectedServiceType;
-  DateTime? _selectedServiceDate;
-  bool _isRecurring = false;
-  String? _selectedRecurrenceInterval;
-
-  // Mock data for dropdowns
-  final List<String> _vehicles = ['Toyota Corolla', 'Honda City', 'Suzuki Alto'];
   final List<String> _serviceTypes = [
-    'Oil Change', 
-    'Brake Pad Replacement', 
-    'Tire Rotation', 
-    'Air Filter Replacement', 
-    'Annual Inspection',
+    'Regular Maintenance',
+    'Oil Change',
+    'Brake Service',
+    'Tire Service',
+    'Engine Service',
+    'Electrical Service',
     'Other'
   ];
-  final List<String> _recurrenceIntervals = [
-    'Every 3 months',
-    'Every 6 months',
-    'Yearly',
-    'Every 5,000 km',
-    'Every 10,000 km',
-    'Every 20,000 km',
-    'Custom'
-  ];
+  final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
+  final ServiceRecordService _serviceRecordService = ServiceRecordService.instance;
 
   @override
   void initState() {
     super.initState();
-    // If vehicle ID is provided, set the selected vehicle
-    if (widget.vehicleId != null) {
-      // In a real app, you would look up the vehicle name from the ID
-      _selectedVehicle = _vehicles.first;
-    }
-
-    // If editing, populate the form with existing service data
     if (widget.existingService != null) {
-      _populateForm();
-    }
-  }
-
-  void _populateForm() {
-    final service = widget.existingService!;
-    _titleController.text = service['title'] ?? '';
-    _descriptionController.text = service['description'] ?? '';
-    _serviceProviderController.text = service['serviceProvider'] ?? '';
-    _odometerController.text = service['odometer']?.toString().replaceAll(' km', '') ?? '';
-    _costController.text = service['cost']?.toString().replaceAll('Rs. ', '').replaceAll(',', '') ?? '';
-    _notesController.text = service['notes'] ?? '';
-    _selectedVehicle = service['vehicle'];
-    _selectedServiceType = service['serviceType'];
-    _isRecurring = service['isRecurring'] ?? false;
-    _selectedRecurrenceInterval = service['recurrenceInterval'];
-    
-    // Handle service date
-    if (service['serviceDate'] != null) {
-      final dateParts = service['serviceDate'].toString().split(' ');
-      if (dateParts.length == 3) {
-        final month = _getMonthNumber(dateParts[0]);
-        final day = int.parse(dateParts[1].replaceAll(',', ''));
-        final year = int.parse(dateParts[2]);
-        _selectedServiceDate = DateTime(year, month, day);
-        _serviceDateController.text = '${dateParts[0]} ${dateParts[1]} ${dateParts[2]}';
+      _titleController.text = widget.existingService!.title;
+      _descriptionController.text = widget.existingService!.description ?? '';
+      _costController.text = widget.existingService!.cost.toString();
+      _mileageController.text = widget.existingService!.mileage?.toString() ?? '';
+      _selectedDate = widget.existingService!.serviceDate;
+      _selectedServiceType = widget.existingService!.serviceType ?? 'Regular Maintenance';
+      if (widget.existingService!.parts != null) {
+        _partsController.text = widget.existingService!.parts!.join(', ');
       }
     }
-  }
-
-  int _getMonthNumber(String month) {
-    final months = {
-      'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
-      'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
-    };
-    return months[month] ?? 1;
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _serviceProviderController.dispose();
-    _serviceDateController.dispose();
-    _odometerController.dispose();
     _costController.dispose();
-    _notesController.dispose();
+    _mileageController.dispose();
+    _partsController.dispose();
     super.dispose();
   }
 
-  Future<void> _selectServiceDate() async {
-    final DateTime? picked = await showDatePicker(
+  Future<void> _selectDate() async {
+    final DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: _selectedServiceDate ?? DateTime.now(),
+      initialDate: _selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
     );
-    if (picked != null && picked != _selectedServiceDate) {
+
+    if (pickedDate != null && pickedDate != _selectedDate) {
       setState(() {
-        _selectedServiceDate = picked;
-        _serviceDateController.text = '${_getMonthName(picked.month)} ${picked.day}, ${picked.year}';
+        _selectedDate = pickedDate;
       });
     }
   }
 
-  String _getMonthName(int month) {
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    return months[month - 1];
+  List<String>? _parsePartsList() {
+    if (_partsController.text.isEmpty) return null;
+    
+    final parts = _partsController.text
+        .split(',')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+    
+    return parts.isEmpty ? null : parts;
   }
 
-  void _saveServiceRecord() {
+  Future<void> _saveServiceRecord() async {
     if (_formKey.currentState!.validate()) {
-      // Create service record object
-      final service = {
-        'title': _titleController.text,
-        'description': _descriptionController.text,
-        'vehicle': _selectedVehicle,
-        'serviceType': _selectedServiceType,
-        'serviceProvider': _serviceProviderController.text,
-        'serviceDate': _serviceDateController.text,
-        'odometer': '${_odometerController.text} km',
-        'cost': 'Rs. ${_costController.text}',
-        'notes': _notesController.text,
-        'isRecurring': _isRecurring,
-        'recurrenceInterval': _isRecurring ? _selectedRecurrenceInterval : null,
-      };
-      
-      // Success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Service record saved successfully'),
-          backgroundColor: AppTheme.primaryColor,
-        ),
-      );
-      
-      // Return to previous screen
-      Navigator.pop(context, service);
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final double cost = double.parse(_costController.text);
+        final int? mileage = _mileageController.text.isNotEmpty 
+            ? int.tryParse(_mileageController.text) 
+            : null;
+        
+        final String vehicleId = widget.vehicleId ?? 
+            (widget.existingService != null 
+                ? widget.existingService!.vehicleId.toHexString() 
+                : throw Exception('Vehicle ID is required'));
+
+        if (widget.existingService == null) {
+          // Add new service record
+          await _serviceRecordService.addServiceRecord(
+            vehicleId: vehicleId,
+            title: _titleController.text,
+            description: _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
+            serviceDate: _selectedDate,
+            mileage: mileage,
+            cost: cost,
+            serviceType: _selectedServiceType,
+            parts: _parsePartsList(),
+          );
+        } else {
+          // Update existing service record
+          final updatedService = widget.existingService!.copyWith(
+            title: _titleController.text,
+            description: _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
+            serviceDate: _selectedDate,
+            mileage: mileage,
+            cost: cost,
+            serviceType: _selectedServiceType,
+            parts: _parsePartsList(),
+          );
+          
+          await _serviceRecordService.updateServiceRecord(updatedService);
+        }
+
+        // Pop back to previous screen
+        if (mounted) {
+          Navigator.of(context).pop(true); // Return true to indicate success
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${e.toString()}')),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.existingService != null;
-    
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Service Record' : 'Add Service Record'),
+        title: Text(widget.existingService == null ? 'Add Service Record' : 'Edit Service Record'),
       ),
       body: Form(
         key: _formKey,
@@ -183,299 +170,123 @@ class _AddServiceRecordScreenState extends State<AddServiceRecordScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildBasicInfoSection(),
-              const SizedBox(height: 24),
-              _buildServiceDetailsSection(),
-              const SizedBox(height: 24),
-              _buildRecurrenceSection(),
-              const SizedBox(height: 24),
-              _buildNotesSection(),
-              const SizedBox(height: 32),
-              CustomButton(
-                text: isEditing ? 'Update Service Record' : 'Save Service Record',
-                onPressed: _saveServiceRecord,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBasicInfoSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Basic Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Vehicle',
-              ),
-              value: _selectedVehicle,
-              items: _vehicles.map((String vehicle) {
-                return DropdownMenuItem<String>(
-                  value: vehicle,
-                  child: Text(vehicle),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedVehicle = newValue;
-                });
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select a vehicle';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Service Type',
-              ),
-              value: _selectedServiceType,
-              items: _serviceTypes.map((String type) {
-                return DropdownMenuItem<String>(
-                  value: type,
-                  child: Text(type),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedServiceType = newValue;
-                });
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select a service type';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Service Title',
-                hintText: 'e.g. Regular Oil Change',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a title for this service';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description (Optional)',
-                hintText: 'Brief description of the service',
-              ),
-              maxLines: 2,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildServiceDetailsSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Service Details',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _serviceProviderController,
-              decoration: const InputDecoration(
-                labelText: 'Service Provider',
-                hintText: 'e.g. ABC Workshop',
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _serviceDateController,
-              decoration: const InputDecoration(
-                labelText: 'Service Date',
-                hintText: 'Select date',
-                suffixIcon: Icon(Icons.calendar_today),
-              ),
-              readOnly: true,
-              onTap: _selectServiceDate,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select a service date';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _odometerController,
-              decoration: const InputDecoration(
-                labelText: 'Odometer Reading (km)',
-                hintText: 'e.g. 15000',
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter the odometer reading';
-                }
-                if (int.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _costController,
-              decoration: const InputDecoration(
-                labelText: 'Cost (Rs.)',
-                hintText: 'e.g. 2500',
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter the service cost';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecurrenceSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Recurrence',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Switch(
-                  value: _isRecurring,
-                  activeColor: AppTheme.primaryColor,
-                  onChanged: (value) {
-                    setState(() {
-                      _isRecurring = value;
-                    });
-                  },
-                ),
-                const SizedBox(width: 8),
-                const Text('Set as recurring service'),
-              ],
-            ),
-            if (_isRecurring) ...[
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
+              // Title Field
+              TextFormField(
+                controller: _titleController,
                 decoration: const InputDecoration(
-                  labelText: 'Recurrence Interval',
+                  labelText: 'Title *',
+                  border: OutlineInputBorder(),
                 ),
-                value: _selectedRecurrenceInterval,
-                items: _recurrenceIntervals.map((String interval) {
-                  return DropdownMenuItem<String>(
-                    value: interval,
-                    child: Text(interval),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedRecurrenceInterval = newValue;
-                  });
-                },
                 validator: (value) {
-                  if (_isRecurring && (value == null || value.isEmpty)) {
-                    return 'Please select a recurrence interval';
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a title';
                   }
                   return null;
                 },
               ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
+              const SizedBox(height: 16),
 
-  Widget _buildNotesSection() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Notes',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+              // Date Picker Field
+              InkWell(
+                onTap: _selectDate,
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Service Date *',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                  child: Text(_dateFormat.format(_selectedDate)),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Additional Notes (Optional)',
-                hintText: 'Any additional information about this service',
+              const SizedBox(height: 16),
+              
+              // Cost Field
+              TextFormField(
+                controller: _costController,
+                decoration: const InputDecoration(
+                  labelText: 'Cost *',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter cost';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
               ),
-              maxLines: 4,
-            ),
-          ],
+              const SizedBox(height: 16),
+              
+              // Mileage Field
+              TextFormField(
+                controller: _mileageController,
+                decoration: const InputDecoration(
+                  labelText: 'Odometer Reading (km)',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              
+              // Service Type Dropdown
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: 'Service Type',
+                  border: OutlineInputBorder(),
+                ),
+                value: _selectedServiceType,
+                items: _serviceTypes.map((type) {
+                  return DropdownMenuItem(
+                    value: type,
+                    child: Text(type),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedServiceType = value;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // Parts Field
+              TextFormField(
+                controller: _partsController,
+                decoration: const InputDecoration(
+                  labelText: 'Parts (comma separated)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Description Field
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 24),
+              
+              // Save Button
+              ElevatedButton(
+                onPressed: _isLoading ? null : _saveServiceRecord,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: _isLoading
+                    ? const CircularProgressIndicator()
+                    : Text(widget.existingService == null ? 'Add Record' : 'Save Changes'),
+              ),
+            ],
+          ),
         ),
       ),
     );
