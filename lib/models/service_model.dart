@@ -95,3 +95,128 @@ class ServiceModel {
     );
   }
 }
+
+class ServiceRecordModel {
+  final ObjectId? id;
+  final ObjectId userId;
+  final ObjectId vehicleId;
+  final String title;
+  final DateTime date;
+  final double cost;
+  final int? odometer;
+  final String? serviceCenter;
+  final String? description;
+  final List<String>? partsReplaced;
+  final bool isScheduled; // Is this a scheduled maintenance
+  final DateTime? reminderDate; // Date for next service reminder
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  ServiceRecordModel({
+    this.id,
+    required this.userId,
+    required this.vehicleId,
+    required this.title,
+    required this.date,
+    required this.cost,
+    this.odometer,
+    this.serviceCenter,
+    this.description,
+    this.partsReplaced,
+    this.isScheduled = false,
+    this.reminderDate,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) : 
+    createdAt = createdAt ?? DateTime.now(),
+    updatedAt = updatedAt ?? DateTime.now();
+
+  // Convert to Map for MongoDB storage
+  Map<String, dynamic> toMap() {
+    return {
+      if (id != null) '_id': id,
+      'userId': userId,
+      'vehicleId': vehicleId,
+      'title': title,
+      'date': date,
+      'cost': cost,
+      if (odometer != null) 'odometer': odometer,
+      if (serviceCenter != null) 'serviceCenter': serviceCenter,
+      if (description != null) 'description': description,
+      if (partsReplaced != null) 'partsReplaced': partsReplaced,
+      'isScheduled': isScheduled,
+      if (reminderDate != null) 'reminderDate': reminderDate,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+    };
+  }
+
+  // Create from MongoDB document
+  factory ServiceRecordModel.fromJson(Map<String, dynamic> json) {
+    List<String>? parts;
+    if (json['partsReplaced'] != null) {
+      parts = (json['partsReplaced'] as List).map((e) => e.toString()).toList();
+    }
+    
+    return ServiceRecordModel(
+      id: json['_id'] as ObjectId,
+      userId: json['userId'] as ObjectId,
+      vehicleId: json['vehicleId'] as ObjectId,
+      title: json['title'] as String,
+      date: json['date'] is DateTime 
+        ? json['date'] 
+        : DateTime.parse(json['date'].toString()),
+      cost: json['cost'] is int 
+        ? (json['cost'] as int).toDouble() 
+        : json['cost'] as double,
+      odometer: json['odometer'] as int?,
+      serviceCenter: json['serviceCenter'] as String?,
+      description: json['description'] as String?,
+      partsReplaced: parts,
+      isScheduled: json['isScheduled'] as bool? ?? false,
+      reminderDate: json['reminderDate'] != null
+        ? json['reminderDate'] is DateTime
+          ? json['reminderDate']
+          : DateTime.parse(json['reminderDate'].toString())
+        : null,
+      createdAt: json['createdAt'] is DateTime 
+        ? json['createdAt'] 
+        : DateTime.parse(json['createdAt'].toString()),
+      updatedAt: json['updatedAt'] is DateTime 
+        ? json['updatedAt'] 
+        : DateTime.parse(json['updatedAt'].toString()),
+    );
+  }
+
+  ServiceRecordModel copyWith({
+    ObjectId? id,
+    ObjectId? userId,
+    ObjectId? vehicleId,
+    String? title,
+    DateTime? date,
+    double? cost,
+    int? odometer,
+    String? serviceCenter,
+    String? description,
+    List<String>? partsReplaced,
+    bool? isScheduled,
+    DateTime? reminderDate,
+  }) {
+    return ServiceRecordModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      vehicleId: vehicleId ?? this.vehicleId,
+      title: title ?? this.title,
+      date: date ?? this.date,
+      cost: cost ?? this.cost,
+      odometer: odometer ?? this.odometer,
+      serviceCenter: serviceCenter ?? this.serviceCenter,
+      description: description ?? this.description,
+      partsReplaced: partsReplaced ?? this.partsReplaced,
+      isScheduled: isScheduled ?? this.isScheduled,
+      reminderDate: reminderDate ?? this.reminderDate,
+      createdAt: this.createdAt,
+      updatedAt: DateTime.now(),
+    );
+  }
+}

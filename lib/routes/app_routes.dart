@@ -3,6 +3,7 @@ import 'package:karvaan/screens/auth/login_screen.dart';
 import 'package:karvaan/screens/auth/register_screen.dart';
 import 'package:karvaan/navigation/app_navigation.dart';
 import 'package:karvaan/screens/auth/forgot_password_screen.dart';
+import 'package:karvaan/screens/auth/change_password_screen.dart';
 import 'package:karvaan/screens/home/home_screen.dart';
 import 'package:karvaan/screens/profile/profile_screen.dart';
 import 'package:karvaan/screens/settings/settings_screen.dart';
@@ -11,24 +12,35 @@ import 'package:karvaan/screens/vehicles/add_vehicle_screen.dart';
 import 'package:karvaan/screens/vehicles/vehicle_detail_screen.dart';
 
 class AppRoutes {
-  // Route names
-  static const String splash = '/';
+  // Authentication
   static const String login = '/login';
-  static const String register = '/signup';
+  static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
-  static const String home = '/home';
+  
+  // Main app flow
+  static const String splash = '/splash';
   static const String main = '/main';
-  static const String addVehicle = '/add-vehicle';
-  static const String vehicleDetail = '/vehicle-detail';
-  static const String vehiclesList = '/vehicles-list';
-  static const String addService = '/add-service';
-  static const String serviceDetail = '/service-detail';
-  static const String services = '/services';
-  static const String addFuel = '/add-fuel';
-  static const String fuelHistory = '/fuel-history';
-  static const String analytics = '/analytics';
-  static const String settingsRoute = '/settings'; // Changed name here
+  static const String home = '/home';
   static const String profile = '/profile';
+  
+  // Vehicle routes
+  static const String vehiclesList = '/vehicles';
+  static const String addVehicle = '/vehicles/add';
+  static const String vehicleDetails = '/vehicles/details';
+  static const String vehicleDetail = '/vehicle/detail';
+  
+  // Fuel routes
+  static const String addFuelEntry = '/fuel/add';
+  static const String fuelEntries = '/fuel/list';
+  
+  // Service routes
+  static const String services = '/services';
+  static const String addService = '/services/add';
+  
+  // Settings and other routes
+  static const String settings = '/settings';
+  static const String settingsRoute = '/settings/main';
+  static const String about = '/about';
   static const String changePassword = '/change-password';
 
   // Route generator
@@ -64,6 +76,7 @@ class AppRoutes {
         final args = settings.arguments as Map<String, dynamic>;
         return MaterialPageRoute(
           builder: (_) => VehicleDetailScreen(
+            vehicleId: args['vehicleId'] as String,
             vehicleName: args['vehicleName'] as String,
             registrationNumber: args['registrationNumber'] as String,
           ),
@@ -72,6 +85,8 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const AppNavigation(initialIndex: 3));
       case settingsRoute: // Changed name here
         return MaterialPageRoute(builder: (_) => const SettingsScreen());
+      case changePassword:
+        return MaterialPageRoute(builder: (_) => const ChangePasswordScreen());
       default:
         // For routes that aren't implemented yet, just show a placeholder
         return MaterialPageRoute(

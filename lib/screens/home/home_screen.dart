@@ -1,14 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:karvaan/models/engine_stats_model.dart';
 import 'package:karvaan/providers/user_provider.dart';
+import 'package:karvaan/services/engine_stats_service.dart';
 import 'package:karvaan/theme/app_theme.dart';
 import 'package:karvaan/widgets/custom_button.dart';
+import 'package:karvaan/widgets/engine_stat_card.dart';
 import 'package:karvaan/screens/vehicles/vehicle_detail_screen.dart';
 import 'package:karvaan/screens/vehicles/add_vehicle_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:mongo_dart/mongo_dart.dart' hide State, Center;
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final EngineStatsService _engineStatsService = EngineStatsService.instance;
+  EngineStatsModel? _liveStats;
+  bool _isLoading = false;
+  
   @override
   Widget build(BuildContext context) {
     // Access user provider to get current user data
@@ -43,6 +56,8 @@ class HomeScreen extends StatelessWidget {
                   
                   const SizedBox(height: 24),
                   _buildQuickStats(),
+                  const SizedBox(height: 24),
+                  _buildEngineStatsSection(),
                   const SizedBox(height: 24),
                   _buildMyVehiclesSection(context),
                   const SizedBox(height: 24),
@@ -80,6 +95,243 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+  
+  Widget _buildEngineStatsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Engine Stats',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              CustomButton(
+                text: 'Measure Live Stats',
+                onPressed: _generateRandomEngineStats,
+                isLoading: _isLoading,
+                icon: Icons.speed,
+                isFullWidth: false,
+                height: 36,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_liveStats != null) _buildEngineStatsDisplay() else _buildNoStatsMessage(),
+      ],
+    );
+  }
+  
+  Widget _buildNoStatsMessage() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.info_outline,
+              size: 48,
+              color: AppTheme.primaryColor,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No engine stats available',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Press the "Measure Live Stats" button to generate demo engine statistics.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.textSecondaryColor),
+            ),
+            const SizedBox(height: 16),
+            CustomButton(
+              text: 'Measure Live Stats',
+              onPressed: _generateRandomEngineStats,
+              isLoading: _isLoading,
+              icon: Icons.speed,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildEngineStatsDisplay() {
+    if (_liveStats == null) return const SizedBox.shrink();
+    
+    return Column(
+      children: [
+        EngineStatGroup(
+          title: 'Engine Performance',
+          icon: Icons.speed,
+          children: [
+            EngineStatCard(
+              title: 'Engine RPM',
+              value: _liveStats!.engineRpm.toStringAsFixed(0),
+              icon: Icons.speed,
+              unit: 'RPM',
+              color: AppTheme.primaryColor,
+            ),
+            EngineStatCard(
+              title: 'Vehicle Speed',
+              value: _liveStats!.vehicleSpeed.toStringAsFixed(1),
+              icon: Icons.directions_car,
+              unit: 'km/h',
+              color: Colors.blue,
+            ),
+            EngineStatCard(
+              title: 'Calculated Load',
+              value: _liveStats!.calculatedLoadValue.toStringAsFixed(1),
+              icon: Icons.trending_up,
+              unit: '%',
+              color: Colors.orange,
+            ),
+            EngineStatCard(
+              title: 'Throttle Position',
+              value: _liveStats!.absoluteThrottlePosition.toStringAsFixed(1),
+              icon: Icons.speed,
+              unit: '%',
+              color: Colors.purple,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        EngineStatGroup(
+          title: 'Temperature & Air',
+          icon: Icons.thermostat,
+          children: [
+            EngineStatCard(
+              title: 'Coolant Temp',
+              value: _liveStats!.coolantTemperature.toStringAsFixed(1),
+              icon: Icons.thermostat,
+              unit: '°C',
+              color: Colors.red,
+            ),
+            EngineStatCard(
+              title: 'Intake Air Temp',
+              value: _liveStats!.intakeAirTemperature.toStringAsFixed(1),
+              icon: Icons.air,
+              unit: '°C',
+              color: Colors.lightBlue,
+            ),
+            EngineStatCard(
+              title: 'Air Flow Rate',
+              value: _liveStats!.airFlowRate.toStringAsFixed(1),
+              icon: Icons.air,
+              unit: 'g/s',
+              color: Colors.teal,
+            ),
+            EngineStatCard(
+              title: 'Manifold Pressure',
+              value: _liveStats!.intakeManifoldPressure.toStringAsFixed(1),
+              icon: Icons.compress,
+              unit: 'kPa',
+              color: Colors.indigo,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        EngineStatGroup(
+          title: 'Fuel System',
+          icon: Icons.local_gas_station,
+          children: [
+            EngineStatCard(
+              title: 'Fuel System',
+              value: _liveStats!.fuelSystemStatus,
+              icon: Icons.settings,
+              color: Colors.green,
+            ),
+            EngineStatCard(
+              title: 'Fuel Pressure',
+              value: _liveStats!.fuelPressure.toStringAsFixed(0),
+              icon: Icons.local_gas_station,
+              unit: 'kPa',
+              color: Colors.amber,
+            ),
+            EngineStatCard(
+              title: 'Short Term Trim',
+              value: _liveStats!.shortTermFuelTrim.toStringAsFixed(1),
+              icon: Icons.tune,
+              unit: '%',
+              color: Colors.cyan,
+            ),
+            EngineStatCard(
+              title: 'Long Term Trim',
+              value: _liveStats!.longTermFuelTrim.toStringAsFixed(1),
+              icon: Icons.tune,
+              unit: '%',
+              color: Colors.deepPurple,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        EngineStatGroup(
+          title: 'Other Parameters',
+          icon: Icons.miscellaneous_services,
+          children: [
+            EngineStatCard(
+              title: 'Timing Advance',
+              value: _liveStats!.timingAdvance.toStringAsFixed(1),
+              icon: Icons.timer,
+              unit: '°',
+              color: Colors.brown,
+            ),
+            // We'll just show one oxygen sensor for simplicity
+            if (_liveStats!.oxygenSensorVoltages.isNotEmpty)
+              EngineStatCard(
+                title: 'O2 Sensor Voltage',
+                value: _liveStats!.oxygenSensorVoltages.values.first.toStringAsFixed(2),
+                icon: Icons.sensors,
+                unit: 'V',
+                color: Colors.blueGrey,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+  
+  Future<void> _generateRandomEngineStats() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // For demo purposes, we'll just generate random stats without a specific vehicle
+      // In a real implementation, this would connect to an OBD-II device via Bluetooth
+      final userId = Provider.of<UserProvider>(context, listen: false).currentUser!.id!;
+      
+      // Create a random ObjectId for demo purposes
+      final randomVehicleId = ObjectId();
+      
+      // Generate random engine stats
+      final randomStats = await _engineStatsService.generateRandomEngineStats(randomVehicleId.toHexString());
+      
+      // Update the UI
+      setState(() {
+        _liveStats = randomStats;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error generating stats: ${e.toString()}')),
+      );
+    }
   }
 
   Widget _buildQuickStats() {
@@ -123,10 +375,10 @@ class HomeScreen extends StatelessWidget {
           children: [
             Expanded(
               child: _buildStatCard(
-                'Fuel Expenses',
-                'Rs. 15,000',
-                Icons.local_gas_station,
-                Colors.orange,
+                'Engine Health',
+                'Good',
+                Icons.health_and_safety,
+                Colors.green,
               ),
             ),
             const SizedBox(width: 12),
@@ -250,6 +502,7 @@ class HomeScreen extends StatelessWidget {
               builder: (context) => VehicleDetailScreen(
                 vehicleName: name,
                 registrationNumber: regNumber,
+                vehicleId: ObjectId().toHexString(), // Providing required vehicleId parameter
               ),
             ),
           );

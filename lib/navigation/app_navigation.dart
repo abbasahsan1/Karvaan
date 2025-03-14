@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:karvaan/screens/home/home_screen.dart';
-import 'package:karvaan/screens/vehicles/vehicle_detail_screen.dart';
+import 'package:karvaan/screens/vehicles/vehicles_list_screen.dart';
+import 'package:karvaan/screens/services/services_list_screen.dart';
 import 'package:karvaan/screens/profile/profile_screen.dart';
+import 'package:karvaan/theme/app_theme.dart';
 
 class AppNavigation extends StatefulWidget {
   final int initialIndex;
-  
-  const AppNavigation({Key? key, this.initialIndex = 0}) : super(key: key);
+
+  const AppNavigation({
+    Key? key,
+    this.initialIndex = 0,
+  }) : super(key: key);
 
   @override
   _AppNavigationState createState() => _AppNavigationState();
@@ -14,23 +19,43 @@ class AppNavigation extends StatefulWidget {
 
 class _AppNavigationState extends State<AppNavigation> {
   late int _selectedIndex;
-  
+  late PageController _pageController;
+
   final List<Widget> _screens = [
     const HomeScreen(),
-    const Scaffold(body: Center(child: Text('Services'))), // Placeholder
-    const Scaffold(body: Center(child: Text('Analytics'))), // Placeholder
+    const VehiclesListScreen(),
+    const ServicesListScreen(),
     const ProfileScreen(),
+  ];
+
+  final List<String> _titles = [
+    'Home',
+    'My Vehicles',
+    'Services',
+    'Profile',
   ];
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: _selectedIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     });
   }
 
@@ -38,27 +63,28 @@ class _AppNavigationState extends State<AppNavigation> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Karvaan'),
+        title: Text(_titles[_selectedIndex]),
+        elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.pushNamed(context, '/settings');
-            },
-          ),
+          if (_selectedIndex == 0) // Only show settings icon on home screen
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () {
+                Navigator.pushNamed(context, '/settings/main');
+              },
+            ),
         ],
       ),
-      body: _screens[_selectedIndex],
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pushNamed(context, '/add-vehicle');
-        },
-        child: const Icon(Icons.add),
-        tooltip: 'Add Vehicle',
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        children: _screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
+        selectedItemColor: AppTheme.primaryColor,
+        unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(
@@ -66,12 +92,12 @@ class _AppNavigationState extends State<AppNavigation> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.build),
-            label: 'Services',
+            icon: Icon(Icons.directions_car),
+            label: 'Vehicles',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.analytics),
-            label: 'Analytics',
+            icon: Icon(Icons.build),
+            label: 'Services',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

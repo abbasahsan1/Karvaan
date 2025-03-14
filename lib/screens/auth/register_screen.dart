@@ -49,10 +49,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final success = await userProvider.register(
+        _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
-        name: _nameController.text.trim(),
-        phone: _phoneController.text.trim(),
       );
 
       if (success) {

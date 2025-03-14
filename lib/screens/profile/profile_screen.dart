@@ -66,8 +66,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       try {
         final userProvider = Provider.of<UserProvider>(context, listen: false);
         final success = await userProvider.updateProfile(
-          _nameController.text.trim(),
-          _phoneController.text.trim(),
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
         );
         
         if (success) {

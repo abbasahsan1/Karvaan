@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:karvaan/models/vehicle_model.dart';
-import 'package:karvaan/routes/app_routes.dart';
 import 'package:karvaan/services/vehicle_service.dart';
+import 'package:karvaan/widgets/custom_button.dart';
+import 'package:karvaan/widgets/vehicle_card.dart';
+import 'package:karvaan/routes/app_routes.dart';
 
 class VehiclesListScreen extends StatefulWidget {
   const VehiclesListScreen({Key? key}) : super(key: key);
 
   @override
-  _VehiclesListScreenState createState() => _VehiclesListScreenState();
+  State<VehiclesListScreen> createState() => _VehiclesListScreenState();
 }
 
 class _VehiclesListScreenState extends State<VehiclesListScreen> {
   final VehicleService _vehicleService = VehicleService.instance;
+  
   bool _isLoading = true;
   List<VehicleModel> _vehicles = [];
   String? _errorMessage;
@@ -23,8 +26,6 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
   }
 
   Future<void> _loadVehicles() async {
-    if (!mounted) return;
-    
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -32,6 +33,7 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
 
     try {
       final vehicles = await _vehicleService.getVehiclesForCurrentUser();
+      
       if (mounted) {
         setState(() {
           _vehicles = vehicles;
@@ -48,142 +50,86 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
     }
   }
 
-  Future<void> _addVehicle() async {
-    final result = await Navigator.pushNamed(context, AppRoutes.addVehicle);
-    if (result == true) {
-      _loadVehicles();
-    }
-  }
-
-  Future<void> _editVehicle(VehicleModel vehicle) async {
-    final result = await Navigator.pushNamed(
-      context, 
-      AppRoutes.addVehicle,
-      arguments: {'existingVehicle': vehicle},
-    );
-    if (result == true) {
-      _loadVehicles();
-    }
-  }
-
-  Future<void> _deleteVehicle(VehicleModel vehicle) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: Text('Are you sure you want to delete ${vehicle.name}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('CANCEL'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('DELETE'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      try {
-        await _vehicleService.deleteVehicle(vehicle.id!.toHexString());
-        _loadVehicles();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${vehicle.name} deleted')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting vehicle: ${e.toString()}')),
-          );
-        }
-      }
-    }
-  }
-
-  void _viewVehicleDetails(VehicleModel vehicle) {
-    Navigator.pushNamed(
-      context, 
-      AppRoutes.vehicleDetail,
-      arguments: {
-        'vehicleName': vehicle.name,
-        'registrationNumber': vehicle.registrationNumber,
-        'vehicleId': vehicle.id!.toHexString(),
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Vehicles'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _addVehicle,
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
               ? Center(child: Text(_errorMessage!))
-              : _vehicles.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('No vehicles found'),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: _addVehicle,
-                            child: const Text('Add a Vehicle'),
-                          ),
-                        ],
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadVehicles,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(8),
-                        itemCount: _vehicles.length,
-                        itemBuilder: (context, index) {
-                          final vehicle = _vehicles[index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            child: ListTile(
-                              title: Text(vehicle.name),
-                              subtitle: Text(vehicle.registrationNumber),
-                              trailing: PopupMenuButton(
-                                icon: const Icon(Icons.more_vert),
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem(
-                                    value: 'edit',
-                                    child: Text('Edit'),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'delete',
-                                    child: Text('Delete'),
-                                  ),
-                                ],
-                                onSelected: (value) {
-                                  if (value == 'edit') {
-                                    _editVehicle(vehicle);
-                                  } else if (value == 'delete') {
-                                    _deleteVehicle(vehicle);
-                                  }
-                                },
-                              ),
-                              onTap: () => _viewVehicleDetails(vehicle),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+              : RefreshIndicator(
+                  onRefresh: _loadVehicles,
+                  child: _vehicles.isEmpty
+                      ? _buildNoVehiclesMessage()
+                      : _buildVehiclesList(),
+                ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addVehicle,
+        child: const Icon(Icons.add),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+      ),
     );
+  }
+
+  Widget _buildVehiclesList() {
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: _vehicles.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        return VehicleCard(vehicle: _vehicles[index]);
+      },
+    );
+  }
+
+  Widget _buildNoVehiclesMessage() {
+    return Center(
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.directions_car_outlined,
+              size: 80,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'No vehicles added yet',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Add your first vehicle to start tracking fuel, services, and more',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 32),
+            CustomButton(
+              text: 'Add Vehicle',
+              onPressed: _addVehicle,
+              icon: Icons.add,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addVehicle() async {
+    final result = await Navigator.pushNamed(context, AppRoutes.addVehicle);
+    if (result == true) {
+      _loadVehicles();
+    }
   }
 }

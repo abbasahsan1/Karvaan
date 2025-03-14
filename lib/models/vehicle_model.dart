@@ -26,25 +26,30 @@ class VehicleModel {
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : 
-    this.createdAt = createdAt ?? DateTime.now(),
-    this.updatedAt = updatedAt ?? DateTime.now();
+    createdAt = createdAt ?? DateTime.now(),
+    updatedAt = updatedAt ?? DateTime.now();
 
-  Map<String, dynamic> toJson() {
+  // Convert to Map for MongoDB storage
+  Map<String, dynamic> toMap() {
     return {
       if (id != null) '_id': id,
       'userId': userId,
       'name': name,
       'registrationNumber': registrationNumber,
-      'make': make,
-      'model': model,
-      'year': year,
-      'color': color,
-      'mileage': mileage,
+      if (make != null) 'make': make,
+      if (model != null) 'model': model,
+      if (year != null) 'year': year,
+      if (color != null) 'color': color,
+      if (mileage != null) 'mileage': mileage,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
     };
   }
+  
+  // Alias for toMap to maintain compatibility with repository code
+  Map<String, dynamic> toJson() => toMap();
 
+  // Create from MongoDB document
   factory VehicleModel.fromJson(Map<String, dynamic> json) {
     return VehicleModel(
       id: json['_id'] as ObjectId,

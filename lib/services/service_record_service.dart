@@ -1,67 +1,124 @@
 import 'dart:developer';
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:karvaan/models/service_model.dart';
-import 'package:karvaan/repositories/service_repository.dart';
+import 'package:karvaan/services/auth_service.dart';
+import 'package:karvaan/services/database_service.dart';
+import 'package:mongo_dart/mongo_dart.dart' as mongo;
 
 class ServiceRecordService {
-  final ServiceRepository _serviceRepository = ServiceRepository.instance;
-  
   // Singleton pattern
   ServiceRecordService._privateConstructor();
-  static final ServiceRecordService _instance = ServiceRecordService._privateConstructor();
-  static ServiceRecordService get instance => _instance;
+  static final ServiceRecordService instance = ServiceRecordService._privateConstructor();
+
+  final _db = DatabaseService.instance;
+  final _authService = AuthService.instance;
 
   // Get all service records for a vehicle
-  Future<List<ServiceModel>> getServiceRecordsForVehicle(String vehicleId) async {
+  Future<List<ServiceRecordModel>> getServiceRecordsForVehicle(String vehicleId) async {
     try {
-      // Convert String to ObjectId
-      final vehicleObjId = ObjectId.parse(vehicleId);
-      return await _serviceRepository.getServicesByVehicleId(vehicleObjId);
+      final collection = await _db.getCollection('service_records');
+      final vehicleObjectId = mongo.ObjectId.parse(vehicleId);
+      
+      final cursor = await collection.find(
+        mongo.where.eq('vehicleId', vehicleObjectId).sortBy('date', descending: true)
+      );
+      
+      final List<Map<String, dynamic>> records = await cursor.toList();
+      return records.map((json) => ServiceRecordModel.fromJson(json)).toList();
     } catch (e) {
       log('Error getting service records for vehicle: $e');
-      return [];
+      throw Exception('Failed to get service records: $e');
+    }
+  }
+
+  Future<List<ServiceRecordModel>> getUpcomingServiceReminders() async {
+    try {
+      final currentUser = _authService.currentUser;
+      if (currentUser == null || currentUser.id == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final userId = currentUser.id!;
+      final collection = await _db.getCollection('service_records');
+      final now = DateTime.now();
+      
+      // Get records with future reminder dates
+      final cursor = await collection.find(
+        mongo.where
+          .eq('userId', userId)
+          .gt('reminderDate', now)
+          .sortBy('reminderDate')
+      );
+      
+      final List<Map<String, dynamic>> records = await cursor.toList();
+      return records.map((json) => ServiceRecordModel.fromJson(json)).toList();
+    } catch (e) {
+      throw Exception('Failed to get service reminders: $e');
     }
   }
 
   // Add a new service record
-  Future<ServiceModel> addServiceRecord({
+  Future<ServiceRecordModel> addServiceRecord({
     required String vehicleId,
     required String title,
-    String? description,
-    required DateTime serviceDate,
-    int? mileage,
+    required DateTime date,
     required double cost,
-    String? serviceType,
-    List<String>? parts,
+    int? odometer,
+    String? serviceCenter,
+    String? description,
+    List<String>? partsReplaced,
+    bool isScheduled = false,
+    DateTime? reminderDate,
   }) async {
     try {
-      // Convert String to ObjectId
-      final vehicleObjId = ObjectId.parse(vehicleId);
+      final currentUser = _authService.currentUser;
+      if (currentUser == null || currentUser.id == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final userId = currentUser.id!;
+      final vehicleObjectId = mongo.ObjectId.parse(vehicleId);
       
-      final service = ServiceModel(
-        vehicleId: vehicleObjId,
+      final newRecord = ServiceRecordModel(
+        userId: userId,
+        vehicleId: vehicleObjectId,
         title: title,
-        description: description,
-        serviceDate: serviceDate,
-        mileage: mileage,
+        date: date,
         cost: cost,
-        serviceType: serviceType,
-        parts: parts,
+        odometer: odometer,
+        serviceCenter: serviceCenter,
+        description: description,
+        partsReplaced: partsReplaced,
+        isScheduled: isScheduled,
+        reminderDate: reminderDate,
       );
+
+      final collection = await _db.getCollection('service_records');
+      final result = await collection.insertOne(newRecord.toMap());
       
-      return await _serviceRepository.createService(service);
+      if (result.isSuccess) {
+        final id = result.id as mongo.ObjectId;
+        return newRecord.copyWith(id: id);
+      } else {
+        throw Exception('Failed to add service record');
+      }
     } catch (e) {
-      log('Error adding service record: $e');
-      rethrow;
+      throw Exception('Failed to add service record: $e');
     }
   }
 
   // Get service record by ID
-  Future<ServiceModel?> getServiceRecordById(String id) async {
+  Future<ServiceRecordModel?> getServiceRecordById(String id) async {
     try {
-      // Convert String to ObjectId
-      final objectId = ObjectId.parse(id);
-      return await _serviceRepository.getServiceById(objectId);
+      final collection = await _db.getCollection('service_records');
+      final objectId = mongo.ObjectId.parse(id);
+      
+      final result = await collection.findOne(mongo.where.eq('_id', objectId));
+      if (result == null) {
+        return null;
+      }
+      
+      return ServiceRecordModel.fromJson(result);
     } catch (e) {
       log('Error getting service record by ID: $e');
       return null;
@@ -69,24 +126,40 @@ class ServiceRecordService {
   }
 
   // Update service record
-  Future<ServiceModel> updateServiceRecord(ServiceModel service) async {
+  Future<void> updateServiceRecord(ServiceRecordModel record) async {
     try {
-      return await _serviceRepository.updateService(service);
+      if (record.id == null) {
+        throw Exception('Cannot update record without ID');
+      }
+
+      final collection = await _db.getCollection('service_records');
+      
+      final result = await collection.replaceOne(
+        mongo.where.eq('_id', record.id),
+        record.toMap(),
+      );
+
+      if (result.isFailure) {
+        throw Exception('Failed to update service record');
+      }
     } catch (e) {
-      log('Error updating service record: $e');
-      rethrow;
+      throw Exception('Failed to update service record: $e');
     }
   }
 
   // Delete service record
   Future<void> deleteServiceRecord(String id) async {
     try {
-      // Convert String to ObjectId
-      final objectId = ObjectId.parse(id);
-      await _serviceRepository.deleteService(objectId);
+      final collection = await _db.getCollection('service_records');
+      final objectId = mongo.ObjectId.parse(id);
+      
+      final result = await collection.deleteOne({'_id': objectId});
+      
+      if (result.isFailure) {
+        throw Exception('Failed to delete service record');
+      }
     } catch (e) {
-      log('Error deleting service record: $e');
-      rethrow;
+      throw Exception('Failed to delete service record: $e');
     }
   }
 }

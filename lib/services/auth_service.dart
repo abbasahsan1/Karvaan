@@ -7,11 +7,15 @@ import 'package:karvaan/utils/password_hasher.dart';
 
 class AuthService {
   final UserRepository _userRepository = UserRepository.instance;
+  UserModel? _currentUser;
   
   // Singleton pattern
   AuthService._privateConstructor();
   static final AuthService _instance = AuthService._privateConstructor();
   static AuthService get instance => _instance;
+  
+  // Current user getter
+  UserModel? get currentUser => _currentUser;
 
   // Check if user is logged in
   Future<bool> isLoggedIn() async {
@@ -81,6 +85,9 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('userId', user.id!.toHexString());
       
+      // Set current user
+      _currentUser = user;
+      
       return user;
     } catch (e) {
       log('Error logging in: $e');
@@ -105,6 +112,7 @@ class AuthService {
   Future<void> logout() async {
     try {
       await _userRepository.clearCurrentUserId();
+      _currentUser = null;
     } catch (e) {
       log('Error logging out: $e');
       rethrow;
@@ -117,18 +125,21 @@ class AuthService {
       final userId = await _userRepository.getCurrentUserId();
       
       if (userId == null) {
+        _currentUser = null;
         return null;
       }
       
-      return await _userRepository.getUserById(userId);
+      _currentUser = await _userRepository.getUserById(userId);
+      return _currentUser;
     } catch (e) {
       log('Error getting current user: $e');
+      _currentUser = null;
       return null;
     }
   }
 
   // Update user profile
-  Future<UserModel> updateProfile(String name, String phone) async {
+  Future<UserModel> updateUserProfile({String? name, String? email, String? phone}) async {
     try {
       final userId = await _userRepository.getCurrentUserId();
       
@@ -143,8 +154,9 @@ class AuthService {
       }
       
       final updatedUser = currentUser.copyWith(
-        name: name,
-        phone: phone,
+        name: name ?? currentUser.name,
+        email: email ?? currentUser.email,
+        phone: phone ?? currentUser.phone,
       );
       
       return await _userRepository.updateUser(updatedUser);
@@ -226,8 +238,8 @@ class AuthService {
     }
   }
   
-  // Reset password by email (for forgot password flow)
-  Future<void> resetPasswordByEmail(String email, String newPassword) async {
+  // Request password reset by email (for forgot password flow)
+  Future<void> requestPasswordReset(String email) async {
     try {
       // Fetch user by email
       final user = await _userRepository.getUserByEmail(email);
@@ -236,16 +248,17 @@ class AuthService {
         throw Exception('User not found');
       }
       
-      // Hash the new password
-      final hashedNewPassword = await PasswordHasher.hashPassword(newPassword);
+      // Here we would typically generate a reset token and send an email
+      // For now, we'll just log that a reset was requested
+      log('Password reset requested for email: $email');
       
-      final updatedUser = user.copyWith(
-        password: hashedNewPassword,
-      );
+      // In a real app, you would:
+      // 1. Generate a reset token
+      // 2. Store it with an expiration time
+      // 3. Send an email with a reset link
       
-      await _userRepository.updateUser(updatedUser);
     } catch (e) {
-      log('Error resetting password by email: $e');
+      log('Error requesting password reset: $e');
       rethrow;
     }
   }

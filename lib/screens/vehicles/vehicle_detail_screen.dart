@@ -1,57 +1,76 @@
 import 'package:flutter/material.dart';
 import 'package:karvaan/models/vehicle_model.dart';
-import 'package:karvaan/routes/app_routes.dart';
 import 'package:karvaan/services/vehicle_service.dart';
+import 'package:karvaan/services/fuel_entry_service.dart';
+import 'package:karvaan/services/service_record_service.dart';
 import 'package:karvaan/theme/app_theme.dart';
+import 'package:karvaan/routes/app_routes.dart';
 import 'package:karvaan/widgets/custom_button.dart';
-import 'package:karvaan/screens/services/add_service_record_screen.dart';
+import 'package:karvaan/widgets/detail_item.dart';
+import 'package:intl/intl.dart';
 
 class VehicleDetailScreen extends StatefulWidget {
   final String vehicleName;
   final String registrationNumber;
-  final String? vehicleId;
+  final String vehicleId;
 
   const VehicleDetailScreen({
     Key? key,
     required this.vehicleName,
     required this.registrationNumber,
-    this.vehicleId,
+    required this.vehicleId,
   }) : super(key: key);
 
   @override
-  _VehicleDetailScreenState createState() => _VehicleDetailScreenState();
+  State<VehicleDetailScreen> createState() => _VehicleDetailScreenState();
 }
 
 class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   final VehicleService _vehicleService = VehicleService.instance;
+  final FuelEntryService _fuelService = FuelEntryService.instance;
+  final ServiceRecordService _serviceService = ServiceRecordService.instance;
+
   bool _isLoading = true;
   VehicleModel? _vehicle;
   String? _errorMessage;
+  int _fuelEntryCount = 0;
+  int _serviceCount = 0;
+  double _totalFuelCost = 0;
+  bool _isDeleting = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.vehicleId != null) {
-      _loadVehicle();
-    } else {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    _loadVehicleDetails();
   }
 
-  Future<void> _loadVehicle() async {
+  Future<void> _loadVehicleDetails() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final vehicle = await _vehicleService.getVehicleById(widget.vehicleId!);
+      final vehicle = await _vehicleService.getVehicleById(widget.vehicleId);
       
+      // Get fuel entries
+      final fuelEntries = await _fuelService.getFuelEntriesForVehicle(widget.vehicleId);
+      
+      // Get services
+      final services = await _serviceService.getServiceRecordsForVehicle(widget.vehicleId);
+      
+      // Calculate fuel statistics
+      double totalCost = 0;
+      for (var entry in fuelEntries) {
+        totalCost += entry.cost;
+      }
+
       if (mounted) {
         setState(() {
           _vehicle = vehicle;
+          _fuelEntryCount = fuelEntries.length;
+          _serviceCount = services.length;
+          _totalFuelCost = totalCost;
           _isLoading = false;
         });
       }
@@ -69,24 +88,24 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     if (_vehicle == null) return;
 
     final result = await Navigator.pushNamed(
-      context, 
+      context,
       AppRoutes.addVehicle,
       arguments: {'existingVehicle': _vehicle},
     );
 
     if (result == true) {
-      _loadVehicle();
+      _loadVehicleDetails();
     }
   }
 
   Future<void> _deleteVehicle() async {
-    if (_vehicle == null) return;
-
-    final confirm = await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: Text('Are you sure you want to delete ${_vehicle!.name}?'),
+        title: const Text('Delete Vehicle'),
+        content: Text(
+          'Are you sure you want to delete ${_vehicle?.name}? This will also delete all fuel records and service history for this vehicle.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -94,68 +113,94 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('DELETE'),
+            child: const Text('DELETE', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
 
-    if (confirm == true) {
+    if (confirmed == true) {
+      setState(() {
+        _isDeleting = true;
+      });
+
       try {
-        await _vehicleService.deleteVehicle(_vehicle!.id!.toHexString());
+        await _vehicleService.deleteVehicle(widget.vehicleId);
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Vehicle deleted')),
           );
-          Navigator.pop(context, true); // Return success to previous screen
+          Navigator.pop(context, true); // Return true to trigger refresh on previous screen
         }
       } catch (e) {
         if (mounted) {
+          setState(() {
+            _isDeleting = false;
+          });
+          
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting vehicle: ${e.toString()}')),
+            SnackBar(content: Text('Error: ${e.toString()}')),
           );
         }
       }
     }
   }
 
-  void _viewFuelHistory() {
+  Future<void> _updateMileage() async {
     if (_vehicle == null) return;
-    
-    Navigator.pushNamed(
-      context, 
-      AppRoutes.fuelHistory,
-      arguments: {'vehicleId': _vehicle!.id!.toHexString()},
-    );
-  }
 
-  void _viewServiceRecords() {
-    if (_vehicle == null) return;
-    
-    Navigator.pushNamed(
-      context, 
-      AppRoutes.services,
-    );
-  }
+    final TextEditingController mileageController = TextEditingController();
+    mileageController.text = _vehicle!.mileage?.toString() ?? '';
 
-  void _addFuelEntry() {
-    if (_vehicle == null) return;
-    
-    Navigator.pushNamed(
-      context, 
-      AppRoutes.addFuel,
-      arguments: {'vehicleId': _vehicle!.id!.toHexString()},
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Update Mileage'),
+        content: TextField(
+          controller: mileageController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Current Mileage (km)',
+            hintText: 'Enter current odometer reading',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                final mileage = int.parse(mileageController.text.trim());
+                if (mileage < 0) {
+                  throw Exception('Mileage cannot be negative');
+                }
+                
+                await _vehicleService.updateMileage(
+                  widget.vehicleId,
+                  mileage,
+                );
+                
+                if (context.mounted) {
+                  Navigator.pop(context, true);
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: ${e.toString()}')),
+                );
+              }
+            },
+            child: const Text('UPDATE'),
+          ),
+        ],
+      ),
     );
-  }
 
-  void _addServiceRecord() {
-    if (_vehicle == null) return;
-    
-    Navigator.pushNamed(
-      context, 
-      AppRoutes.addService,
-      arguments: {'vehicleId': _vehicle!.id!.toHexString()},
-    );
+    if (result == true) {
+      _loadVehicleDetails();
+    }
   }
 
   @override
@@ -169,135 +214,208 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
               icon: const Icon(Icons.edit),
               onPressed: _editVehicle,
             ),
-          if (!_isLoading && _vehicle != null)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: _deleteVehicle,
-            ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
               ? Center(child: Text(_errorMessage!))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Vehicle Info Card
-                      Card(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Vehicle Information',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              const Divider(),
-                              _buildInfoRow('Name', _vehicle?.name ?? widget.vehicleName),
-                              _buildInfoRow('Registration', _vehicle?.registrationNumber ?? widget.registrationNumber),
-                              if (_vehicle?.make != null)
-                                _buildInfoRow('Make', _vehicle!.make!),
-                              if (_vehicle?.model != null)
-                                _buildInfoRow('Model', _vehicle!.model!),
-                              if (_vehicle?.year != null)
-                                _buildInfoRow('Year', _vehicle!.year!.toString()),
-                              if (_vehicle?.color != null)
-                                _buildInfoRow('Color', _vehicle!.color!),
-                              if (_vehicle?.mileage != null)
-                                _buildInfoRow('Mileage', '${_vehicle!.mileage} km'),
-                            ],
-                          ),
-                        ),
-                      ),
-                      
-                      // Quick Actions
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Text(
-                          'Quick Actions',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                      ),
-                      GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        children: [
-                          _buildActionCard(
-                            icon: Icons.local_gas_station,
-                            title: 'Add Fuel',
-                            onTap: _addFuelEntry,
-                          ),
-                          _buildActionCard(
-                            icon: Icons.build,
-                            title: 'Add Service',
-                            onTap: _addServiceRecord,
-                          ),
-                          _buildActionCard(
-                            icon: Icons.history,
-                            title: 'Fuel History',
-                            onTap: _viewFuelHistory,
-                          ),
-                          _buildActionCard(
-                            icon: Icons.miscellaneous_services,
-                            title: 'Service Records',
-                            onTap: _viewServiceRecords,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+              : _buildVehicleDetails(),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildVehicleDetails() {
+    if (_vehicle == null) {
+      return const Center(child: Text('Vehicle not found'));
+    }
+
+    final currencyFormat = NumberFormat.currency(symbol: 'Rs. ', decimalDigits: 0);
+    
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          // Vehicle icon/image
+          Center(
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.directions_car,
+                size: 80,
+                color: AppTheme.primaryColor,
+              ),
+            ),
           ),
-          Text(value),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionCard({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          const SizedBox(height: 24),
+          
+          // Vehicle basic information
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Vehicle Information',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DetailItem(
+                    icon: Icons.drive_file_rename_outline,
+                    label: 'Name',
+                    value: _vehicle!.name,
+                  ),
+                  DetailItem(
+                    icon: Icons.app_registration,
+                    label: 'Registration',
+                    value: _vehicle!.registrationNumber,
+                  ),
+                  if (_vehicle!.make != null)
+                    DetailItem(
+                      icon: Icons.business,
+                      label: 'Make',
+                      value: _vehicle!.make!,
+                    ),
+                  if (_vehicle!.model != null)
+                    DetailItem(
+                      icon: Icons.model_training,
+                      label: 'Model',
+                      value: _vehicle!.model!,
+                    ),
+                  if (_vehicle!.year != null)
+                    DetailItem(
+                      icon: Icons.date_range,
+                      label: 'Year',
+                      value: _vehicle!.year.toString(),
+                    ),
+                  if (_vehicle!.color != null)
+                    DetailItem(
+                      icon: Icons.color_lens,
+                      label: 'Color',
+                      value: _vehicle!.color!,
+                    ),
+                  DetailItem(
+                    icon: Icons.speed,
+                    label: 'Current Mileage',
+                    value: _vehicle!.mileage != null ? '${_vehicle!.mileage} km' : 'Not set',
+                    trailingWidget: IconButton(
+                      icon: const Icon(Icons.edit, size: 16),
+                      onPressed: _updateMileage,
+                      tooltip: 'Update mileage',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Statistics Card
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Statistics',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DetailItem(
+                    icon: Icons.local_gas_station,
+                    label: 'Fuel Records',
+                    value: '$_fuelEntryCount entries',
+                  ),
+                  DetailItem(
+                    icon: Icons.attach_money,
+                    label: 'Total Fuel Cost',
+                    value: currencyFormat.format(_totalFuelCost),
+                  ),
+                  DetailItem(
+                    icon: Icons.build,
+                    label: 'Service Records',
+                    value: '$_serviceCount records',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Action buttons
+          Row(
             children: [
-              Icon(icon, size: 48),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+              Expanded(
+                child: CustomButton(
+                  text: 'Add Fuel Entry',
+                  onPressed: () async {
+                    final result = await Navigator.pushNamed(
+                      context,
+                      AppRoutes.addFuelEntry,
+                      arguments: {
+                        'vehicleId': widget.vehicleId,
+                        'vehicleName': _vehicle!.name,
+                      },
+                    );
+                    if (result == true) {
+                      _loadVehicleDetails();
+                    }
+                  },
+                  icon: Icons.local_gas_station,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: CustomButton(
+                  text: 'Add Service',
+                  onPressed: () async {
+                    final result = await Navigator.pushNamed(
+                      context,
+                      AppRoutes.addService,
+                      arguments: {
+                        'vehicleId': widget.vehicleId,
+                        'vehicleName': _vehicle!.name,
+                      },
+                    );
+                    if (result == true) {
+                      _loadVehicleDetails();
+                    }
+                  },
+                  icon: Icons.build,
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 24),
+          
+          // Delete button
+          SizedBox(
+            width: double.infinity,
+            child: CustomButton(
+              text: 'Delete Vehicle',
+              onPressed: _deleteVehicle,
+              isLoading: _isDeleting,
+              icon: Icons.delete,
+              backgroundColor: Colors.red,
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
       ),
     );
   }

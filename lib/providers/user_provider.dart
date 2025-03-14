@@ -1,62 +1,51 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:karvaan/models/user_model.dart';
 import 'package:karvaan/services/auth_service.dart';
 
-/// Provider to manage and distribute current user data
-class UserProvider extends ChangeNotifier {
-  UserModel? _currentUser;
+class UserProvider with ChangeNotifier {
+  UserModel? _user;
   bool _isLoading = false;
   String? _error;
-
   final AuthService _authService = AuthService.instance;
 
-  // Getters
-  UserModel? get currentUser => _currentUser;
+  UserModel? get user => _user;
+  UserModel? get currentUser => _user;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isAuthenticated => _currentUser != null;
-  String get displayName => _currentUser?.name ?? 'Guest';
+  bool get isAuthenticated => _user != null;
+  String get displayName => _user?.name ?? 'User';
 
-  // Initialize user data
-  Future<void> initialize() async {
-    if (_currentUser != null) return;
-    await refreshUser();
+  UserProvider() {
+    _initUser();
   }
 
-  // Refresh user data from server
-  Future<void> refreshUser() async {
+  Future<void> _initUser() async {
     _isLoading = true;
-    _error = null;
     notifyListeners();
 
     try {
-      final isLoggedIn = await _authService.isLoggedIn();
-      if (isLoggedIn) {
-        _currentUser = await _authService.getCurrentUser();
-      } else {
-        _currentUser = null;
-      }
+      _user = _authService.currentUser;
+      _error = null;
     } catch (e) {
       _error = e.toString();
-      _currentUser = null;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Login user
   Future<bool> login(String email, String password) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final user = await _authService.login(email, password);
-      _currentUser = user;
+      _user = await _authService.login(email, password);
+      notifyListeners();
       return true;
     } catch (e) {
       _error = e.toString();
+      notifyListeners();
       return false;
     } finally {
       _isLoading = false;
@@ -64,18 +53,18 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  // Register user
-  Future<bool> register(String email, String password, {String? name, String? phone}) async {
+  Future<bool> register(String name, String email, String password) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      await _authService.register(email, password, name: name, phone: phone);
-      // Don't set currentUser after registration - redirect to login instead
+      _user = await _authService.register(email, password, name: name);
+      notifyListeners();
       return true;
     } catch (e) {
       _error = e.toString();
+      notifyListeners();
       return false;
     } finally {
       _isLoading = false;
@@ -83,38 +72,94 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  // Logout user
-  Future<void> logout() async {
+  Future<bool> logout() async {
     _isLoading = true;
     notifyListeners();
 
     try {
       await _authService.logout();
-      _currentUser = null;
+      _user = null;
+      notifyListeners();
+      return true;
     } catch (e) {
       _error = e.toString();
+      notifyListeners();
+      return false;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Update user profile
-  Future<bool> updateProfile(String name, String phone) async {
+  Future<bool> updateProfile({
+    String? name,
+    String? email,
+    String? phone,
+  }) async {
+    if (_user == null) return false;
+
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final updatedUser = await _authService.updateProfile(name, phone);
-      _currentUser = updatedUser;
+      _user = await _authService.updateUserProfile(
+        name: name ?? _user!.name,
+        email: email ?? _user!.email,
+        phone: phone ?? _user!.phone,
+      );
+      notifyListeners();
       return true;
     } catch (e) {
       _error = e.toString();
+      notifyListeners();
       return false;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<bool> changePassword(String currentPassword, String newPassword) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _authService.changePassword(currentPassword, newPassword);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> resetPassword(String email) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _authService.resetPassword(email);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void clearError() {
+    _error = null;
+    notifyListeners();
   }
 }

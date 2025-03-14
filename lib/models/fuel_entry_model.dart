@@ -2,66 +2,68 @@ import 'package:mongo_dart/mongo_dart.dart';
 
 class FuelEntryModel {
   final ObjectId? id;
+  final ObjectId userId;
   final ObjectId vehicleId;
   final DateTime date;
-  final double quantity;
-  final double cost;
-  final int? mileage;
-  final String? fuelType;
-  final bool fullTank;
+  final double amount; // Amount in liters
+  final double cost;  // Total cost
+  final int? odometer; // Current mileage
   final String? notes;
+  final bool isFullTank;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   FuelEntryModel({
     this.id,
+    required this.userId,
     required this.vehicleId,
     required this.date,
-    required this.quantity,
+    required this.amount,
     required this.cost,
-    this.mileage,
-    this.fuelType,
-    this.fullTank = true,
+    this.odometer,
     this.notes,
+    this.isFullTank = true,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : 
-    this.createdAt = createdAt ?? DateTime.now(),
-    this.updatedAt = updatedAt ?? DateTime.now();
+    createdAt = createdAt ?? DateTime.now(),
+    updatedAt = updatedAt ?? DateTime.now();
 
-  Map<String, dynamic> toJson() {
+  // Convert to Map for MongoDB storage
+  Map<String, dynamic> toMap() {
     return {
       if (id != null) '_id': id,
+      'userId': userId,
       'vehicleId': vehicleId,
       'date': date,
-      'quantity': quantity,
+      'amount': amount,
       'cost': cost,
-      'mileage': mileage,
-      'fuelType': fuelType,
-      'fullTank': fullTank,
-      'notes': notes,
+      if (odometer != null) 'odometer': odometer,
+      if (notes != null && notes!.isNotEmpty) 'notes': notes,
+      'isFullTank': isFullTank,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
     };
   }
 
+  // Create from MongoDB document
   factory FuelEntryModel.fromJson(Map<String, dynamic> json) {
     return FuelEntryModel(
       id: json['_id'] as ObjectId,
+      userId: json['userId'] as ObjectId,
       vehicleId: json['vehicleId'] as ObjectId,
       date: json['date'] is DateTime 
         ? json['date'] 
         : DateTime.parse(json['date'].toString()),
-      quantity: (json['quantity'] is int) 
-        ? (json['quantity'] as int).toDouble() 
-        : json['quantity'] as double,
-      cost: (json['cost'] is int) 
+      amount: json['amount'] is int 
+        ? (json['amount'] as int).toDouble() 
+        : json['amount'] as double,
+      cost: json['cost'] is int 
         ? (json['cost'] as int).toDouble() 
         : json['cost'] as double,
-      mileage: json['mileage'] as int?,
-      fuelType: json['fuelType'] as String?,
-      fullTank: json['fullTank'] as bool? ?? true,
+      odometer: json['odometer'] as int?,
       notes: json['notes'] as String?,
+      isFullTank: json['isFullTank'] as bool? ?? true,
       createdAt: json['createdAt'] is DateTime 
         ? json['createdAt'] 
         : DateTime.parse(json['createdAt'].toString()),
@@ -73,27 +75,30 @@ class FuelEntryModel {
 
   FuelEntryModel copyWith({
     ObjectId? id,
+    ObjectId? userId,
     ObjectId? vehicleId,
     DateTime? date,
-    double? quantity,
+    double? amount,
     double? cost,
-    int? mileage,
-    String? fuelType,
-    bool? fullTank,
+    int? odometer,
     String? notes,
+    bool? isFullTank,
   }) {
     return FuelEntryModel(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
       vehicleId: vehicleId ?? this.vehicleId,
       date: date ?? this.date,
-      quantity: quantity ?? this.quantity,
+      amount: amount ?? this.amount,
       cost: cost ?? this.cost,
-      mileage: mileage ?? this.mileage,
-      fuelType: fuelType ?? this.fuelType,
-      fullTank: fullTank ?? this.fullTank,
+      odometer: odometer ?? this.odometer,
       notes: notes ?? this.notes,
+      isFullTank: isFullTank ?? this.isFullTank,
       createdAt: this.createdAt,
       updatedAt: DateTime.now(),
     );
   }
+
+  // Calculate fuel price per liter
+  double get pricePerLiter => amount > 0 ? cost / amount : 0;
 }
