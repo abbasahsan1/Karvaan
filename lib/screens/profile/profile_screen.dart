@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:karvaan/models/vehicle_model.dart';
 import 'package:karvaan/providers/user_provider.dart';
 import 'package:karvaan/routes/app_routes.dart';
+import 'package:karvaan/services/vehicle_service.dart';
 import 'package:karvaan/theme/app_theme.dart';
 import 'package:karvaan/widgets/custom_button.dart';
 import 'package:provider/provider.dart';
@@ -20,6 +22,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isEditing = false;
   bool _isLoading = false;
   String? _errorMessage;
+  
+  // Vehicle service to fetch vehicle count
+  final VehicleService _vehicleService = VehicleService.instance;
+  int _vehicleCount = 0;
+  bool _loadingVehicles = false;
 
   @override
   void initState() {
@@ -32,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Initialize user data when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadUserData();
+      _loadVehicleCount();
     });
   }
 
@@ -52,6 +60,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _nameController.text = user.name ?? '';
       _emailController.text = user.email;
       _phoneController.text = user.phone ?? '';
+    }
+  }
+  
+  // Load vehicle count for the current user
+  Future<void> _loadVehicleCount() async {
+    if (mounted) {
+      setState(() {
+        _loadingVehicles = true;
+      });
+    }
+    
+    try {
+      final vehicles = await _vehicleService.getVehiclesForCurrentUser();
+      
+      if (mounted) {
+        setState(() {
+          _vehicleCount = vehicles.length;
+          _loadingVehicles = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loadingVehicles = false;
+        });
+      }
     }
   }
 
@@ -186,6 +220,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 32),
                 
+                // Vehicle Count Section
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.directions_car,
+                        color: AppTheme.primaryColor,
+                        size: 36,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Your Vehicles',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            _loadingVehicles
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : Text(
+                                    '$_vehicleCount ${_vehicleCount == 1 ? 'vehicle' : 'vehicles'} registered',
+                                    style: TextStyle(
+                                      color: AppTheme.textSecondaryColor,
+                                    ),
+                                  ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onPressed: () {
+                          Navigator.pushNamed(context, AppRoutes.vehiclesList);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
                 // Error message
                 if (_errorMessage != null)
                   Container(
@@ -203,12 +291,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 
                 // Personal Information
-                const Text(
-                  'Personal Information',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Personal Information',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (!_isEditing)
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _isEditing = true;
+                          });
+                        },
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: const Text('Edit'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.primaryColor,
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 
