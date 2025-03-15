@@ -4,12 +4,31 @@ Karvaan is a comprehensive vehicle management app designed to help vehicle owner
 
 ## Features
 
-- **Vehicle Management**: Add and manage multiple vehicles
+### Core Features
+- **Vehicle Management**: Add and manage multiple vehicles with detailed information
 - **Service Tracking**: Log and track maintenance services
 - **Fuel Tracking**: Monitor fuel consumption and expenses
 - **Expense Analytics**: Get insights into your vehicle expenses
 - **Performance Metrics**: Track vehicle performance over time
 - **Document Management**: Store important vehicle documents
+
+### Latest Additions (v1.5.x)
+- **Live Engine Statistics**: Real-time monitoring of engine performance metrics
+  - Engine RPM, Vehicle Speed, and Load Value
+  - Coolant and Intake Air Temperature
+  - Fuel System Status and Pressure
+  - Throttle Position and Timing
+  - Oxygen Sensor Data
+- **Enhanced UI/UX**:
+  - Grid-based metrics display in home and vehicle screens
+  - Improved loading animations
+  - Supporting text for better user guidance
+  - Streamlined navigation
+
+### Security & Performance
+- **Secure Authentication**: Password hashing for enhanced security
+- **Profile Management**: Updated profile editing capabilities
+- **Optimized Performance**: Improved data loading and display
 
 ## Screenshots
 
