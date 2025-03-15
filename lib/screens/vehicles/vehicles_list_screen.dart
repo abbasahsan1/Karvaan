@@ -52,26 +52,16 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Vehicles'),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? Center(child: Text(_errorMessage!))
-              : RefreshIndicator(
-                  onRefresh: _loadVehicles,
-                  child: _vehicles.isEmpty
-                      ? _buildNoVehiclesMessage()
-                      : _buildVehiclesList(),
-                ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addVehicle,
-        child: const Icon(Icons.add),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-      ),
-    );
+    return _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _errorMessage != null
+            ? Center(child: Text(_errorMessage!))
+            : RefreshIndicator(
+                onRefresh: _loadVehicles,
+                child: _vehicles.isEmpty
+                    ? _buildNoVehiclesMessage()
+                    : _buildVehiclesList(),
+              );
   }
 
   Widget _buildVehiclesList() {

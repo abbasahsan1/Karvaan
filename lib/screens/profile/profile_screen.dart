@@ -124,201 +124,185 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          if (!_isEditing)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                setState(() {
-                  _isEditing = true;
-                });
-              },
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        if (userProvider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (userProvider.currentUser == null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('You are not logged in.'),
+                const SizedBox(height: 16),
+                CustomButton(
+                  text: 'Login',
+                  onPressed: () {
+                    Navigator.pushReplacementNamed(context, AppRoutes.login);
+                  },
+                ),
+              ],
             ),
-        ],
-      ),
-      body: Consumer<UserProvider>(
-        builder: (context, userProvider, child) {
-          if (userProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          
-          if (userProvider.currentUser == null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('You are not logged in.'),
-                  const SizedBox(height: 16),
-                  CustomButton(
-                    text: 'Login',
-                    onPressed: () {
-                      Navigator.pushReplacementNamed(context, AppRoutes.login);
-                    },
-                  ),
-                ],
-              ),
-            );
-          }
-          
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Profile header
-                  Center(
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
-                          child: Icon(
-                            Icons.person,
-                            size: 50,
-                            color: AppTheme.primaryColor,
-                          ),
+          );
+        }
+        
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Profile header
+                Center(
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
+                        child: Icon(
+                          Icons.person,
+                          size: 50,
+                          color: AppTheme.primaryColor,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          userProvider.displayName,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          userProvider.currentUser!.email,
-                          style: TextStyle(
-                            color: AppTheme.textSecondaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  // Error message
-                  if (_errorMessage != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red),
                       ),
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(color: Colors.red.shade700),
+                      const SizedBox(height: 16),
+                      Text(
+                        userProvider.displayName,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  
-                  // Personal Information
-                  const Text(
-                    'Personal Information',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Name field
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Full Name',
-                      prefixIcon: Icon(Icons.person),
-                    ),
-                    enabled: _isEditing,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your name';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Email field (read-only)
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email),
-                    ),
-                    enabled: false, // Email can't be changed
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Phone field
-                  TextFormField(
-                    controller: _phoneController,
-                    decoration: const InputDecoration(
-                      labelText: 'Phone Number',
-                      prefixIcon: Icon(Icons.phone),
-                    ),
-                    enabled: _isEditing,
-                    keyboardType: TextInputType.phone,
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  // Actions
-                  if (_isEditing)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CustomButton(
-                            text: 'Cancel',
-                            onPressed: () {
-                              _loadUserData(); // Reload original data
-                              setState(() {
-                                _isEditing = false;
-                                _errorMessage = null;
-                              });
-                            },
-                            isOutlined: true,
-                          ),
+                      Text(
+                        userProvider.currentUser!.email,
+                        style: TextStyle(
+                          color: AppTheme.textSecondaryColor,
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: CustomButton(
-                            text: 'Save',
-                            onPressed: _saveProfile,
-                            isLoading: _isLoading,
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        CustomButton(
-                          text: 'Change Password',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                // Error message
+                if (_errorMessage != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red),
+                    ),
+                    child: Text(
+                      _errorMessage!,
+                      style: TextStyle(color: Colors.red.shade700),
+                    ),
+                  ),
+                
+                // Personal Information
+                const Text(
+                  'Personal Information',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Name field
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Full Name',
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                  enabled: _isEditing,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Email field (read-only)
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: Icon(Icons.email),
+                  ),
+                  enabled: false, // Email can't be changed
+                ),
+                const SizedBox(height: 16),
+                
+                // Phone field
+                TextFormField(
+                  controller: _phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    prefixIcon: Icon(Icons.phone),
+                  ),
+                  enabled: _isEditing,
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 32),
+                
+                // Actions
+                if (_isEditing)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CustomButton(
+                          text: 'Cancel',
                           onPressed: () {
-                            Navigator.pushNamed(context, AppRoutes.changePassword);
+                            _loadUserData(); // Reload original data
+                            setState(() {
+                              _isEditing = false;
+                              _errorMessage = null;
+                            });
                           },
                           isOutlined: true,
                         ),
-                        const SizedBox(height: 16),
-                        CustomButton(
-                          text: 'Logout',
-                          onPressed: _logout,
-                          backgroundColor: AppTheme.accentRedColor,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: CustomButton(
+                          text: 'Save',
+                          onPressed: _saveProfile,
+                          isLoading: _isLoading,
                         ),
-                      ],
-                    ),
-                ],
-              ),
+                      ),
+                    ],
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      CustomButton(
+                        text: 'Change Password',
+                        onPressed: () {
+                          Navigator.pushNamed(context, AppRoutes.changePassword);
+                        },
+                        isOutlined: true,
+                      ),
+                      const SizedBox(height: 16),
+                      CustomButton(
+                        text: 'Logout',
+                        onPressed: _logout,
+                        backgroundColor: AppTheme.accentRedColor,
+                      ),
+                    ],
+                  ),
+              ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }

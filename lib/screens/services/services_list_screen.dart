@@ -81,28 +81,29 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Service Records'),
-        bottom: TabBar(
+    return Column(
+      children: [
+        TabBar(
           controller: _tabController,
           tabs: const [
             Tab(text: 'All Services'),
             Tab(text: 'Upcoming'),
           ],
         ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? Center(child: Text(_errorMessage!))
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildAllServicesTab(),
-                    _buildUpcomingServicesTab(),
-                  ],
-                ),
+        Expanded(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _errorMessage != null
+                  ? Center(child: Text(_errorMessage!))
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildAllServicesTab(),
+                        _buildUpcomingServicesTab(),
+                      ],
+                    ),
+        ),
+      ],
     );
   }
 
