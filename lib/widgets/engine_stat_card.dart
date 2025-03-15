@@ -120,7 +120,13 @@ class EngineStatGroup extends StatelessWidget {
         Wrap(
           spacing: 8.0,
           runSpacing: 8.0,
-          children: children,
+          alignment: WrapAlignment.start,
+          children: children.map((child) => SizedBox(
+            width: MediaQuery.of(context).size.width > 600 
+              ? (MediaQuery.of(context).size.width - 48) / 3 
+              : (MediaQuery.of(context).size.width - 40) / 2,
+            child: child,
+          )).toList(),
         ),
       ],
     );
