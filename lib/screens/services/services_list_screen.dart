@@ -85,9 +85,9 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
       children: [
         TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'All Services'),
-            Tab(text: 'Upcoming'),
+          tabs: [
+            Tab(child: Text('All Services', style: Theme.of(context).textTheme.titleSmall)),
+            Tab(child: Text('Upcoming', style: Theme.of(context).textTheme.titleSmall)),
           ],
         ),
         Expanded(
