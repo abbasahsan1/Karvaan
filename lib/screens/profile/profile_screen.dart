@@ -6,6 +6,7 @@ import 'package:karvaan/services/vehicle_service.dart';
 import 'package:karvaan/theme/app_theme.dart';
 import 'package:karvaan/widgets/custom_button.dart';
 import 'package:provider/provider.dart';
+import 'package:karvaan/navigation/app_navigation.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -265,7 +266,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       IconButton(
                         icon: const Icon(Icons.arrow_forward_ios, size: 16),
                         onPressed: () {
-                          Navigator.pushNamed(context, AppRoutes.vehiclesList);
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (context) => const AppNavigation(initialIndex: 1),
+                            ),
+                            (route) => false,
+                          );
                         },
                       ),
                     ],
