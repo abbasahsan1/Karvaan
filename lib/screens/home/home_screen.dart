@@ -425,42 +425,5 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class EngineStatGroup extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final List<Widget> children;
-
-  const EngineStatGroup({
-    Key? key,
-    required this.title,
-    required this.icon,
-    required this.children,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: AppTheme.textSecondaryColor),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...children,
-      ],
-    );
-  }
-}
+// Using the updated EngineStatGroup from engine_stat_card.dart instead
+// This class is now deprecated and will be removed in future updates
