@@ -5,6 +5,7 @@ import 'package:karvaan/services/service_record_service.dart';
 import 'package:karvaan/services/vehicle_service.dart';
 import 'package:karvaan/theme/app_theme.dart';
 import 'package:intl/intl.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 class ServicesListScreen extends StatefulWidget {
   const ServicesListScreen({Key? key}) : super(key: key);
@@ -92,7 +93,12 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
         ),
         Expanded(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(
+                  child: LoadingAnimationWidget.bouncingBall(
+                    color: Theme.of(context).primaryColor,
+                    size: 50,
+                  ),
+                )
               : _errorMessage != null
                   ? Center(child: Text(_errorMessage!))
                   : TabBarView(

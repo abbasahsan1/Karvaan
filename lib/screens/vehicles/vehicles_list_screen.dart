@@ -4,6 +4,7 @@ import 'package:karvaan/services/vehicle_service.dart';
 import 'package:karvaan/widgets/custom_button.dart';
 import 'package:karvaan/widgets/vehicle_card.dart';
 import 'package:karvaan/routes/app_routes.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 class VehiclesListScreen extends StatefulWidget {
   const VehiclesListScreen({Key? key}) : super(key: key);
@@ -54,7 +55,12 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+          child: LoadingAnimationWidget.bouncingBall(
+            color: Theme.of(context).primaryColor,
+            size: 50,
+          ),
+        )
           : _errorMessage != null
               ? Center(child: Text(_errorMessage!))
               : RefreshIndicator(

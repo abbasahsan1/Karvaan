@@ -30,6 +30,9 @@ dependencies:
   # Data Visualization
   fl_chart: ^0.65.0
 
+  # UI Components
+  loading_animation_widget: ^1.2.0+4
+
   # Add this line for password hashing
   encrypt: ^5.0.1
   crypto: ^3.0.3

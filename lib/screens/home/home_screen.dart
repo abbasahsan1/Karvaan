@@ -12,6 +12,7 @@ import 'package:karvaan/screens/vehicles/add_vehicle_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:mongo_dart/mongo_dart.dart' hide State, Center;
 import 'package:karvaan/services/engine_stats_service.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -128,7 +129,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildVehicleSelector(),
                   const SizedBox(height: 16),
                   _isLoadingVehicles
-                    ? const Center(child: CircularProgressIndicator())
+                    ? Center(child: LoadingAnimationWidget.bouncingBall(
+                        color: Theme.of(context).primaryColor,
+                        size: 50,
+                      ))
                     : _userVehicles.isEmpty
                       ? _buildNoVehiclesMessage()
                       : Column(

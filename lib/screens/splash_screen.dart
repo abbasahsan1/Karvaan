@@ -3,6 +3,7 @@ import 'package:karvaan/routes/app_routes.dart';
 import 'package:karvaan/services/database/database_service.dart';
 import 'package:karvaan/theme/app_theme.dart';
 import 'package:karvaan/utils/connectivity_helper.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -152,8 +153,9 @@ class _SplashScreenState extends State<SplashScreen> {
                         ),
                       ),
                     const SizedBox(height: 16),
-                    const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    LoadingAnimationWidget.bouncingBall(
+                      color: Colors.white,
+                      size: 50,
                     ),
                   ],
                 ),
