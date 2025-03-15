@@ -1,7 +1,7 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:karvaan/models/engine_stats_model.dart';
 import 'package:karvaan/providers/user_provider.dart';
-import 'package:karvaan/services/engine_stats_service.dart';
 import 'package:karvaan/theme/app_theme.dart';
 import 'package:karvaan/widgets/custom_button.dart';
 import 'package:karvaan/widgets/engine_stat_card.dart';
@@ -9,6 +9,7 @@ import 'package:karvaan/screens/vehicles/vehicle_detail_screen.dart';
 import 'package:karvaan/screens/vehicles/add_vehicle_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:mongo_dart/mongo_dart.dart' hide State, Center;
+import 'package:karvaan/services/engine_stats_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -18,9 +19,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final EngineStatsService _engineStatsService = EngineStatsService.instance;
-  EngineStatsModel? _liveStats;
   bool _isLoading = false;
+  EngineStatsModel? _liveStats;
+  final _engineStatsService = EngineStatsService.instance;
   
   @override
   Widget build(BuildContext context) {
@@ -57,11 +58,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 24),
                   _buildQuickStats(),
                   const SizedBox(height: 24),
-                  _buildEngineStatsSection(),
+                  _buildVehiclesList(context),
                   const SizedBox(height: 24),
-                  _buildMyVehiclesSection(context),
-                  const SizedBox(height: 24),
-                  _buildUpcomingMaintenanceSection(),
+                  _buildUpcomingMaintenanceSection()
                 ],
               ),
             ),
@@ -94,39 +93,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
-  
-  Widget _buildEngineStatsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Engine Stats',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              CustomButton(
-                text: 'Measure Live Stats',
-                onPressed: _generateRandomEngineStats,
-                isLoading: _isLoading,
-                icon: Icons.speed,
-                isFullWidth: false,
-                height: 36,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (_liveStats != null) _buildEngineStatsDisplay() else _buildNoStatsMessage(),
-      ],
     );
   }
   
@@ -166,7 +132,43 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  
+
+  void _generateRandomEngineStats() {
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Simulate API call delay
+    Future.delayed(const Duration(seconds: 1), () {
+      final userId = Provider.of<UserProvider>(context, listen: false).currentUser!.id!;
+      final vehicleId = ObjectId();
+      
+      setState(() {
+        _liveStats = EngineStatsModel(
+          userId: userId,
+          vehicleId: vehicleId,
+          timestamp: DateTime.now(),
+          engineRpm: 2500 + (Random().nextDouble() * 1000),
+          vehicleSpeed: 60 + (Random().nextDouble() * 40),
+          calculatedLoadValue: 45 + (Random().nextDouble() * 30),
+          absoluteThrottlePosition: 35 + (Random().nextDouble() * 25),
+          coolantTemperature: 85 + (Random().nextDouble() * 10),
+          intakeAirTemperature: 25 + (Random().nextDouble() * 15),
+          airFlowRate: 15 + (Random().nextDouble() * 10),
+          fuelSystemStatus: Random().nextBool() ? 'Closed Loop' : 'Open Loop',
+          shortTermFuelTrim: -5 + (Random().nextDouble() * 10),
+          longTermFuelTrim: -5 + (Random().nextDouble() * 10),
+          intakeManifoldPressure: 30 + (Random().nextDouble() * 40),
+          timingAdvance: 10 + (Random().nextDouble() * 30),
+          oxygenSensorVoltages: {'Bank1-Sensor1': 0.1 + (Random().nextDouble() * 0.9)},
+          oxygenSensorFuelTrims: {'Bank1-Sensor1': -10 + (Random().nextDouble() * 20)},
+          fuelPressure: 300 + (Random().nextDouble() * 100),
+        );
+        _isLoading = false;
+      });
+    });
+  }
+
   Widget _buildEngineStatsDisplay() {
     if (_liveStats == null) return const SizedBox.shrink();
     
@@ -197,13 +199,6 @@ class _HomeScreenState extends State<HomeScreen> {
               unit: '%',
               color: Colors.orange,
             ),
-            EngineStatCard(
-              title: 'Throttle Position',
-              value: _liveStats!.absoluteThrottlePosition.toStringAsFixed(1),
-              icon: Icons.speed,
-              unit: '%',
-              color: Colors.purple,
-            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -223,218 +218,26 @@ class _HomeScreenState extends State<HomeScreen> {
               value: _liveStats!.intakeAirTemperature.toStringAsFixed(1),
               icon: Icons.air,
               unit: '°C',
-              color: Colors.lightBlue,
+              color: Colors.green,
             ),
             EngineStatCard(
               title: 'Air Flow Rate',
               value: _liveStats!.airFlowRate.toStringAsFixed(1),
               icon: Icons.air,
               unit: 'g/s',
-              color: Colors.teal,
+              color: Colors.purple,
             ),
-            EngineStatCard(
-              title: 'Manifold Pressure',
-              value: _liveStats!.intakeManifoldPressure.toStringAsFixed(1),
-              icon: Icons.compress,
-              unit: 'kPa',
-              color: Colors.indigo,
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        EngineStatGroup(
-          title: 'Fuel System',
-          icon: Icons.local_gas_station,
-          children: [
-            EngineStatCard(
-              title: 'Fuel System',
-              value: _liveStats!.fuelSystemStatus,
-              icon: Icons.settings,
-              color: Colors.green,
-            ),
-            EngineStatCard(
-              title: 'Fuel Pressure',
-              value: _liveStats!.fuelPressure.toStringAsFixed(0),
-              icon: Icons.local_gas_station,
-              unit: 'kPa',
-              color: Colors.amber,
-            ),
-            EngineStatCard(
-              title: 'Short Term Trim',
-              value: _liveStats!.shortTermFuelTrim.toStringAsFixed(1),
-              icon: Icons.tune,
-              unit: '%',
-              color: Colors.cyan,
-            ),
-            EngineStatCard(
-              title: 'Long Term Trim',
-              value: _liveStats!.longTermFuelTrim.toStringAsFixed(1),
-              icon: Icons.tune,
-              unit: '%',
-              color: Colors.deepPurple,
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        EngineStatGroup(
-          title: 'Other Parameters',
-          icon: Icons.miscellaneous_services,
-          children: [
-            EngineStatCard(
-              title: 'Timing Advance',
-              value: _liveStats!.timingAdvance.toStringAsFixed(1),
-              icon: Icons.timer,
-              unit: '°',
-              color: Colors.brown,
-            ),
-            // We'll just show one oxygen sensor for simplicity
-            if (_liveStats!.oxygenSensorVoltages.isNotEmpty)
-              EngineStatCard(
-                title: 'O2 Sensor Voltage',
-                value: _liveStats!.oxygenSensorVoltages.values.first.toStringAsFixed(2),
-                icon: Icons.sensors,
-                unit: 'V',
-                color: Colors.blueGrey,
-              ),
           ],
         ),
       ],
     );
   }
   
-  Future<void> _generateRandomEngineStats() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
-    try {
-      // For demo purposes, we'll just generate random stats without a specific vehicle
-      // In a real implementation, this would connect to an OBD-II device via Bluetooth
-      final userId = Provider.of<UserProvider>(context, listen: false).currentUser!.id!;
-      
-      // Create a random ObjectId for demo purposes
-      final randomVehicleId = ObjectId();
-      
-      // Generate random engine stats
-      final randomStats = await _engineStatsService.generateRandomEngineStats(randomVehicleId.toHexString());
-      
-      // Update the UI
-      setState(() {
-        _liveStats = randomStats;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error generating stats: ${e.toString()}')),
-      );
-    }
-  }
-
   Widget _buildQuickStats() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8.0),
-          child: Text(
-            'Quick Stats',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                'Total Vehicles',
-                '3',
-                Icons.directions_car,
-                AppTheme.primaryColor,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                'Upcoming Services',
-                '2',
-                Icons.build,
-                AppTheme.accentBlueColor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                'Engine Health',
-                'Good',
-                Icons.health_and_safety,
-                Colors.green,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                'Total Distance',
-                '1,240 km',
-                Icons.speed,
-                Colors.purple,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
+    return _liveStats == null ? _buildNoStatsMessage() : _buildEngineStatsDisplay();
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              icon,
-              color: color,
-              size: 28,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                color: AppTheme.textSecondaryColor,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMyVehiclesSection(BuildContext context) {
+  Widget _buildVehiclesList(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -634,7 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
     String vehicle,
     String dueDate,
     IconData icon,
-    Color iconColor,
+    Color color,
   ) {
     return Card(
       elevation: 2,
@@ -646,15 +449,18 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                icon,
-                color: iconColor,
-                size: 24,
+              child: Center(
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 28,
+                ),
               ),
             ),
             const SizedBox(width: 16),
@@ -676,28 +482,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: AppTheme.textSecondaryColor,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    dueDate,
-                    style: TextStyle(
-                      color: dueDate.contains('2 days')
-                          ? AppTheme.accentRedColor
-                          : AppTheme.textSecondaryColor,
-                      fontWeight: dueDate.contains('2 days')
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                  ),
                 ],
               ),
             ),
-            CustomButton(
-              text: 'Schedule',
-              onPressed: () {
-                // TODO: Navigate to maintenance scheduling
-              },
-              isFullWidth: false,
-              height: 36,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    dueDate,
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

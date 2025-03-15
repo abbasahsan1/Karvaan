@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:karvaan/models/vehicle_model.dart';
+import 'package:karvaan/models/engine_stats_model.dart';
 import 'package:karvaan/services/vehicle_service.dart';
 import 'package:karvaan/services/fuel_entry_service.dart';
 import 'package:karvaan/services/service_record_service.dart';
+import 'package:karvaan/services/engine_stats_service.dart';
 import 'package:karvaan/theme/app_theme.dart';
 import 'package:karvaan/routes/app_routes.dart';
 import 'package:karvaan/widgets/custom_button.dart';
 import 'package:karvaan/widgets/detail_item.dart';
+import 'package:karvaan/widgets/engine_stat_card.dart';
 import 'package:intl/intl.dart';
 
 class VehicleDetailScreen extends StatefulWidget {
@@ -29,14 +32,17 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   final VehicleService _vehicleService = VehicleService.instance;
   final FuelEntryService _fuelService = FuelEntryService.instance;
   final ServiceRecordService _serviceService = ServiceRecordService.instance;
+  final EngineStatsService _engineStatsService = EngineStatsService.instance;
 
   bool _isLoading = true;
+  bool _isGeneratingStats = false;
   VehicleModel? _vehicle;
   String? _errorMessage;
   int _fuelEntryCount = 0;
   int _serviceCount = 0;
   double _totalFuelCost = 0;
   bool _isDeleting = false;
+  EngineStatsModel? _liveStats;
 
   @override
   void initState() {
@@ -203,6 +209,121 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     }
   }
 
+  Future<void> _generateEngineStats() async {
+    setState(() {
+      _isGeneratingStats = true;
+    });
+
+    try {
+      final stats = await _engineStatsService.generateRandomEngineStats(widget.vehicleId);
+      setState(() {
+        _liveStats = stats;
+        _isGeneratingStats = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGeneratingStats = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating engine stats: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Widget _buildNoStatsMessage() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.info_outline,
+              size: 48,
+              color: AppTheme.primaryColor,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No engine stats available',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Press the "Measure Live Stats" button to generate demo engine statistics.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.textSecondaryColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEngineStatsDisplay() {
+    return Column(
+      children: [
+        EngineStatGroup(
+          title: 'Engine Performance',
+          icon: Icons.speed,
+          children: [
+            EngineStatCard(
+              title: 'Engine RPM',
+              value: _liveStats!.engineRpm.toStringAsFixed(0),
+              icon: Icons.speed,
+              unit: 'RPM',
+              color: AppTheme.primaryColor,
+            ),
+            EngineStatCard(
+              title: 'Vehicle Speed',
+              value: _liveStats!.vehicleSpeed.toStringAsFixed(1),
+              icon: Icons.directions_car,
+              unit: 'km/h',
+              color: Colors.blue,
+            ),
+            EngineStatCard(
+              title: 'Calculated Load',
+              value: _liveStats!.calculatedLoadValue.toStringAsFixed(1),
+              icon: Icons.trending_up,
+              unit: '%',
+              color: Colors.orange,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        EngineStatGroup(
+          title: 'Temperature & Air',
+          icon: Icons.thermostat,
+          children: [
+            EngineStatCard(
+              title: 'Coolant Temp',
+              value: _liveStats!.coolantTemperature.toStringAsFixed(1),
+              icon: Icons.thermostat,
+              unit: '°C',
+              color: Colors.red,
+            ),
+            EngineStatCard(
+              title: 'Intake Air Temp',
+              value: _liveStats!.intakeAirTemperature.toStringAsFixed(1),
+              icon: Icons.air,
+              unit: '°C',
+              color: Colors.green,
+            ),
+            EngineStatCard(
+              title: 'Air Flow Rate',
+              value: _liveStats!.airFlowRate.toStringAsFixed(1),
+              icon: Icons.air,
+              unit: 'g/s',
+              color: Colors.purple,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -357,48 +478,35 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
           ),
           const SizedBox(height: 24),
           
-          // Action buttons
-          Row(
+          // Engine Stats Section
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: CustomButton(
-                  text: 'Add Fuel Entry',
-                  onPressed: () async {
-                    final result = await Navigator.pushNamed(
-                      context,
-                      AppRoutes.addFuelEntry,
-                      arguments: {
-                        'vehicleId': widget.vehicleId,
-                        'vehicleName': _vehicle!.name,
-                      },
-                    );
-                    if (result == true) {
-                      _loadVehicleDetails();
-                    }
-                  },
-                  icon: Icons.local_gas_station,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Engine Stats',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    CustomButton(
+                      text: 'Measure Live Stats',
+                      onPressed: _generateEngineStats,
+                      isLoading: _isGeneratingStats,
+                      icon: Icons.speed,
+                      isFullWidth: false,
+                      height: 36,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: CustomButton(
-                  text: 'Add Service',
-                  onPressed: () async {
-                    final result = await Navigator.pushNamed(
-                      context,
-                      AppRoutes.addService,
-                      arguments: {
-                        'vehicleId': widget.vehicleId,
-                        'vehicleName': _vehicle!.name,
-                      },
-                    );
-                    if (result == true) {
-                      _loadVehicleDetails();
-                    }
-                  },
-                  icon: Icons.build,
-                ),
-              ),
+              const SizedBox(height: 12),
+              if (_liveStats != null) _buildEngineStatsDisplay() else _buildNoStatsMessage(),
             ],
           ),
           const SizedBox(height: 24),
