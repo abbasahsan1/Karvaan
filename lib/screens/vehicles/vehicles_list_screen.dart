@@ -65,13 +65,30 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
   }
 
   Widget _buildVehiclesList() {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: _vehicles.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        return VehicleCard(vehicle: _vehicles[index]);
-      },
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            'Here are all your vehicles',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _vehicles.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              return VehicleCard(vehicle: _vehicles[index]);
+            },
+          ),
+        ),
+      ],
     );
   }
 

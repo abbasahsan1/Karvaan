@@ -216,47 +216,63 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   Widget _buildVehicleSelector() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<VehicleModel>(
-            isExpanded: true,
-            hint: const Text('Select a vehicle'),
-            value: _selectedVehicle,
-            icon: const Icon(Icons.arrow_drop_down),
-            elevation: 16,
-            style: const TextStyle(color: AppTheme.primaryColor, fontSize: 16),
-            onChanged: (VehicleModel? newValue) {
-              if (newValue != null) {
-                setState(() {
-                  _selectedVehicle = newValue;
-                  _loadVehicleStats(newValue.id!.toHexString());
-                });
-              }
-            },
-            items: _userVehicles.map<DropdownMenuItem<VehicleModel>>((VehicleModel vehicle) {
-              return DropdownMenuItem<VehicleModel>(
-                value: vehicle,
-                child: Row(
-                  children: [
-                    const Icon(Icons.directions_car, size: 20, color: AppTheme.primaryColor),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${vehicle.name} (${vehicle.registrationNumber})',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'Choose from your vehicles',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textSecondaryColor,
+            ),
           ),
         ),
-      ),
+        Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<VehicleModel>(
+                isExpanded: true,
+                hint: const Text('Select a vehicle'),
+                value: _selectedVehicle,
+                icon: const Icon(Icons.arrow_drop_down),
+                elevation: 16,
+                style: const TextStyle(color: AppTheme.primaryColor, fontSize: 16),
+                onChanged: (VehicleModel? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedVehicle = newValue;
+                      _loadVehicleStats(newValue.id!.toHexString());
+                    });
+                  }
+                },
+                items: _userVehicles.map<DropdownMenuItem<VehicleModel>>((VehicleModel vehicle) {
+                  return DropdownMenuItem<VehicleModel>(
+                    value: vehicle,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.directions_car, size: 20, color: AppTheme.primaryColor),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${vehicle.name} (${vehicle.registrationNumber})',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
   
@@ -407,6 +423,44 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
+}
 
+class EngineStatGroup extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
 
+  const EngineStatGroup({
+    Key? key,
+    required this.title,
+    required this.icon,
+    required this.children,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: AppTheme.textSecondaryColor),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...children,
+      ],
+    );
+  }
 }
