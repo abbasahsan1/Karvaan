@@ -65,6 +65,9 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
       // Get services
       final services = await _serviceService.getServiceRecordsForVehicle(widget.vehicleId);
       
+      // Get latest engine stats from database
+      final latestStats = await _engineStatsService.getLatestEngineStatsForVehicle(widget.vehicleId);
+      
       // Calculate fuel statistics
       double totalCost = 0;
       for (var entry in fuelEntries) {
@@ -77,6 +80,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
           _fuelEntryCount = fuelEntries.length;
           _serviceCount = services.length;
           _totalFuelCost = totalCost;
+          _liveStats = latestStats; // Set the latest stats from database
           _isLoading = false;
         });
       }
@@ -215,11 +219,18 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     });
 
     try {
-      final stats = await _engineStatsService.generateRandomEngineStats(widget.vehicleId);
-      setState(() {
-        _liveStats = stats;
-        _isGeneratingStats = false;
-      });
+      // Generate random stats and save to database
+      await _engineStatsService.generateRandomEngineStats(widget.vehicleId);
+      
+      // Fetch the latest stats from database to ensure consistency
+      final stats = await _engineStatsService.getLatestEngineStatsForVehicle(widget.vehicleId);
+      
+      if (mounted) {
+        setState(() {
+          _liveStats = stats;
+          _isGeneratingStats = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
