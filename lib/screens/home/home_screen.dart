@@ -211,6 +211,74 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        EngineStatGroup(
+          title: 'Fuel System',
+          icon: Icons.local_gas_station,
+          children: [
+            EngineStatCard(
+              title: 'Fuel System Status',
+              value: _liveStats!.fuelSystemStatus,
+              icon: Icons.info_outline,
+              color: Colors.amber,
+            ),
+            EngineStatCard(
+              title: 'Short Term Fuel Trim',
+              value: _liveStats!.shortTermFuelTrim.toStringAsFixed(1),
+              icon: Icons.trending_up,
+              unit: '%',
+              color: Colors.teal,
+            ),
+            EngineStatCard(
+              title: 'Long Term Fuel Trim',
+              value: _liveStats!.longTermFuelTrim.toStringAsFixed(1),
+              icon: Icons.trending_up,
+              unit: '%',
+              color: Colors.indigo,
+            ),
+            EngineStatCard(
+              title: 'Fuel Pressure',
+              value: _liveStats!.fuelPressure.toStringAsFixed(0),
+              icon: Icons.speed,
+              unit: 'kPa',
+              color: Colors.deepOrange,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        EngineStatGroup(
+          title: 'Throttle & Timing',
+          icon: Icons.tune,
+          children: [
+            EngineStatCard(
+              title: 'Throttle Position',
+              value: _liveStats!.absoluteThrottlePosition.toStringAsFixed(1),
+              icon: Icons.straighten,
+              unit: '%',
+              color: Colors.deepPurple,
+            ),
+            EngineStatCard(
+              title: 'Timing Advance',
+              value: _liveStats!.timingAdvance.toStringAsFixed(1),
+              icon: Icons.timer,
+              unit: '°',
+              color: Colors.brown,
+            ),
+            EngineStatCard(
+              title: 'Intake Manifold Pressure',
+              value: _liveStats!.intakeManifoldPressure.toStringAsFixed(0),
+              icon: Icons.compress,
+              unit: 'kPa',
+              color: Colors.blueGrey,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        EngineStatGroup(
+          title: 'Oxygen Sensors',
+          icon: Icons.sensors,
+          children: _buildOxygenSensorCards(),
+        ),
       ],
     );
   }
@@ -377,6 +445,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
 
+
+  List<Widget> _buildOxygenSensorCards() {
+    final List<Widget> cards = [];
+    
+    // Add cards for each oxygen sensor voltage
+    _liveStats!.oxygenSensorVoltages.forEach((sensorId, voltage) {
+      cards.add(
+        EngineStatCard(
+          title: '$sensorId Voltage',
+          value: voltage.toStringAsFixed(2),
+          icon: Icons.electric_bolt,
+          unit: 'V',
+          color: Colors.cyan,
+        ),
+      );
+      
+      // Add corresponding fuel trim if available
+      if (_liveStats!.oxygenSensorFuelTrims.containsKey(sensorId)) {
+        cards.add(
+          EngineStatCard(
+            title: '$sensorId Trim',
+            value: _liveStats!.oxygenSensorFuelTrims[sensorId]!.toStringAsFixed(1),
+            icon: Icons.tune,
+            unit: '%',
+            color: Colors.lightGreen,
+          ),
+        );
+      }
+    });
+    
+    return cards;
+  }
 
   Widget _buildUpcomingMaintenanceSection() {
     return Column(
