@@ -75,9 +75,8 @@ class _AppNavigationState extends State<AppNavigation> {
           appBar: _GlassAppBar(
             title: _titles[_selectedIndex],
             trailing: _selectedIndex == 0
-                ? IconButton(
-                    icon: const Icon(Icons.settings_rounded),
-                    color: Colors.white,
+                ? _GlassIconButton(
+                    icon: Icons.settings_rounded,
                     onPressed: () => Navigator.pushNamed(context, '/settings/main'),
                   )
                 : null,
@@ -179,15 +178,37 @@ class _GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
             ),
             const Spacer(),
-            if (trailing != null)
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: trailing,
-              ),
+            if (trailing != null) trailing!,
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassIconButton extends StatelessWidget {
+  const _GlassIconButton({
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      width: 44,
+      child: Material(
+        color: AppTheme.primaryColor.withOpacity(0.18),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onPressed,
+          child: Center(
+            child: Icon(icon, color: Colors.white, size: 22),
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:karvaan/theme/app_theme.dart';
+import 'package:karvaan/widgets/glass_container.dart';
 
 class SettingsScreen extends StatefulWidget {
   // Add const to constructor
@@ -27,21 +28,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
+    final theme = Theme.of(context);
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
+    return KarvaanScaffoldShell(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          titleSpacing: 0,
+          title: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: GlassContainer(
+              borderRadius: 24,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              child: Row(
+                children: [
+                  _GlassIconCircleButton(
+                    icon: Icons.arrow_back_rounded,
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                  const SizedBox(width: 14),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.settings_rounded, color: Colors.white),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      'Settings',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        body: ListView(
+          padding: EdgeInsets.fromLTRB(16, 120, 16, 120 + bottomInset),
           children: [
             _buildNotificationSection(),
-            const Divider(height: 1),
             _buildUnitsSection(),
-            const Divider(height: 1),
             _buildAppearanceSection(),
-            const Divider(height: 1),
             _buildDataSection(),
-            const Divider(height: 1),
             _buildAboutSection(),
           ],
         ),
@@ -50,35 +90,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildNotificationSection() {
+    final theme = Theme.of(context);
     return _buildSection(
       title: 'Notifications',
       icon: Icons.notifications_none,
       children: [
         SwitchListTile(
-          title: const Text('Enable Notifications'),
-          subtitle: const Text('Receive important updates and reminders'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+          title: Text(
+            'Enable Notifications',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            'Receive important updates and reminders',
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           value: _notificationsEnabled,
           onChanged: (value) {
             setState(() {
               _notificationsEnabled = value;
             });
           },
-          activeColor: AppTheme.primaryColor,
+          activeColor: Colors.white,
+          activeTrackColor: AppTheme.primaryColor.withOpacity(0.6),
+          inactiveThumbColor: Colors.white54,
+          inactiveTrackColor: Colors.white24,
         ),
         SwitchListTile(
-          title: const Text('Service Reminders'),
-          subtitle: const Text('Notify when maintenance is due'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+          title: Text(
+            'Service Reminders',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            'Notify when maintenance is due',
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           value: _remindersEnabled,
           onChanged: _notificationsEnabled ? (value) {
             setState(() {
               _remindersEnabled = value;
             });
           } : null,
-          activeColor: AppTheme.primaryColor,
+          activeColor: Colors.white,
+          activeTrackColor: AppTheme.primaryColor.withOpacity(0.6),
+          inactiveThumbColor: Colors.white54,
+          inactiveTrackColor: Colors.white24,
         ),
         ListTile(
-          title: const Text('Remind Me Before'),
-          subtitle: const Text('7 days'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'Remind Me Before',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            '7 days',
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           trailing: const Icon(Icons.chevron_right),
           enabled: _notificationsEnabled && _remindersEnabled,
           onTap: _notificationsEnabled && _remindersEnabled ? () {
@@ -90,13 +158,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildUnitsSection() {
+    final theme = Theme.of(context);
     return _buildSection(
       title: 'Units & Format',
       icon: Icons.straighten,
       children: [
         ListTile(
-          title: const Text('Distance Unit'),
-          subtitle: Text(_distanceUnit),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'Distance Unit',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            _distanceUnit,
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             _showSelectionDialog('Distance Unit', _distanceUnits, _distanceUnit, (value) {
@@ -106,10 +182,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             });
           },
         ),
-        const Divider(indent: 16, endIndent: 16),
         ListTile(
-          title: const Text('Volume Unit'),
-          subtitle: Text(_volumeUnit),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'Volume Unit',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            _volumeUnit,
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             _showSelectionDialog('Volume Unit', _volumeUnits, _volumeUnit, (value) {
@@ -119,10 +201,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             });
           },
         ),
-        const Divider(indent: 16, endIndent: 16),
         ListTile(
-          title: const Text('Currency Symbol'),
-          subtitle: Text(_currencySymbol),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'Currency Symbol',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            _currencySymbol,
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             _showSelectionDialog('Currency Symbol', _currencySymbols, _currencySymbol, (value) {
@@ -132,10 +220,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             });
           },
         ),
-        const Divider(indent: 16, endIndent: 16),
         ListTile(
-          title: const Text('Date Format'),
-          subtitle: Text(_dateFormat),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'Date Format',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            _dateFormat,
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             _showSelectionDialog('Date Format', _dateFormats, _dateFormat, (value) {
@@ -150,13 +244,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildAppearanceSection() {
+    final theme = Theme.of(context);
     return _buildSection(
       title: 'Appearance',
       icon: Icons.palette_outlined,
       children: [
         ListTile(
-          title: const Text('Language'),
-          subtitle: Text(_language),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'Language',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            _language,
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             _showSelectionDialog('Language', _languages, _language, (value) {
@@ -166,19 +268,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
             });
           },
         ),
-        const Divider(indent: 16, endIndent: 16),
         ListTile(
-          title: const Text('Theme'),
-          subtitle: const Text('Light'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'Theme',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            'Light',
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             // TODO: Implement theme selection
           },
         ),
-        const Divider(indent: 16, endIndent: 16),
         ListTile(
-          title: const Text('Text Size'),
-          subtitle: const Text('Default'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'Text Size',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            'Default',
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             // TODO: Implement text size selection
@@ -189,31 +303,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildDataSection() {
+    final theme = Theme.of(context);
     return _buildSection(
       title: 'Data & Storage',
       icon: Icons.storage_outlined,
       children: [
         ListTile(
-          title: const Text('Sync Data'),
-          subtitle: const Text('Sync your data across devices'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'Sync Data',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            'Sync your data across devices',
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             // TODO: Implement sync functionality
           },
         ),
-        const Divider(indent: 16, endIndent: 16),
         ListTile(
-          title: const Text('Export Data'),
-          subtitle: const Text('Export as CSV or PDF'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'Export Data',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            'Export as CSV or PDF',
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             // TODO: Implement export functionality
           },
         ),
-        const Divider(indent: 16, endIndent: 16),
         ListTile(
-          title: const Text('Clear Cache'),
-          subtitle: const Text('Free up storage space'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'Clear Cache',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            'Free up storage space',
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             _showClearCacheConfirmation();
@@ -250,37 +384,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildAboutSection() {
+    final theme = Theme.of(context);
     return _buildSection(
       title: 'About & Legal',
       icon: Icons.info_outline,
       children: [
         ListTile(
-          title: const Text('About Karvaan'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'About Karvaan',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             // Navigate to about screen
           },
         ),
-        const Divider(indent: 16, endIndent: 16),
         ListTile(
-          title: const Text('Privacy Policy'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'Privacy Policy',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             // Show privacy policy
           },
         ),
-        const Divider(indent: 16, endIndent: 16),
         ListTile(
-          title: const Text('Terms of Service'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'Terms of Service',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             // Show terms of service
           },
         ),
-        const Divider(indent: 16, endIndent: 16),
         ListTile(
-          title: const Text('App Version'),
-          subtitle: const Text('1.1.0 (build 2)'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          title: Text(
+            'App Version',
+            style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
+          ),
+          subtitle: Text(
+            '1.1.0 (build 2)',
+            style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
           onTap: null,
         ),
       ],
@@ -292,28 +443,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required IconData icon,
     required List<Widget> children,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
+    final theme = Theme.of(context);
+
+    final List<Widget> content = [];
+    for (int i = 0; i < children.length; i++) {
+      if (i > 0) {
+  content.add(Divider(color: Colors.white.withOpacity(0.16), height: 1, thickness: 1));
+      }
+      content.add(children[i]);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: GlassContainer(
+        borderRadius: 28,
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+        child: ListTileTheme(
+          contentPadding: EdgeInsets.zero,
+          iconColor: Colors.white70,
+          textColor: Colors.white,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: AppTheme.primaryColor),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimaryColor,
+              Padding(
+                padding: const EdgeInsets.only(left: 4, right: 4, bottom: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, color: Colors.white),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              ...content,
             ],
           ),
         ),
-        ...children,
-      ],
+      ),
     );
   }
 
@@ -325,35 +504,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
   ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: options.map((option) {
-              return RadioListTile<String>(
-                title: Text(option),
-                value: option,
-                groupValue: currentValue,
-                onChanged: (value) {
-                  if (value != null) {
-                    onSelect(value);
-                    Navigator.of(context).pop();
-                  }
-                },
-                activeColor: AppTheme.primaryColor,
-                selected: option == currentValue,
-              );
-            }).toList(),
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext);
+        return AlertDialog(
+          backgroundColor: const Color(0xE6101B2B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          titleTextStyle: theme.textTheme.titleMedium?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
           ),
-        ),
-        actions: [
-          TextButton(
-            child: const Text('CANCEL'),
-            onPressed: () => Navigator.of(context).pop(),
+          contentTextStyle: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+          title: Text(title),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: options.map((option) {
+                final bool isSelected = option == currentValue;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: RadioListTile<String>(
+                    tileColor: Colors.white.withOpacity(isSelected ? 0.12 : 0.05),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    title: Text(
+                      option,
+                      style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white),
+                    ),
+                    value: option,
+                    groupValue: currentValue,
+                    onChanged: (value) {
+                      if (value != null) {
+                        onSelect(value);
+                        Navigator.of(dialogContext).pop();
+                      }
+                    },
+                    activeColor: AppTheme.accentColorLight,
+                    selected: isSelected,
+                  ),
+                );
+              }).toList(),
+            ),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.white70),
+              child: const Text('CANCEL'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _GlassIconCircleButton extends StatelessWidget {
+  const _GlassIconCircleButton({required this.icon, required this.onPressed});
+
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassContainer(
+      borderRadius: 16,
+      padding: const EdgeInsets.all(10),
+      onTap: onPressed,
+      child: Icon(icon, color: Colors.white),
     );
   }
 }

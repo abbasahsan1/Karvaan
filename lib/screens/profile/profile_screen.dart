@@ -209,8 +209,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
+        final bottomInset = MediaQuery.of(context).padding.bottom;
+
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 72 + bottomInset),
           child: Form(
             key: _formKey,
             child: Column(
@@ -362,6 +364,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   _isEditing = true;
                                 });
                               },
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.white70,
+                              ),
                               icon: const Icon(Icons.edit, size: 16),
                               label: const Text('Edit'),
                             ),

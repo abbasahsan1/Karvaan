@@ -55,6 +55,8 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
@@ -110,9 +112,13 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
                         : _buildVehiclesList(),
                   ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addVehicle,
-        child: const Icon(Icons.add_rounded, size: 28),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(bottom: 24 + bottomInset),
+        child: FloatingActionButton(
+          onPressed: _addVehicle,
+          child: const Icon(Icons.add_rounded, size: 28),
+        ),
       ),
     );
   }

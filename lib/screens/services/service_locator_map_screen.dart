@@ -665,6 +665,7 @@ out skel qt;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return KarvaanScaffoldShell(
       child: Scaffold(
@@ -751,6 +752,27 @@ out skel qt;
                 MarkerLayer(markers: _buildMarkers()),
               ],
             ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                child: IgnorePointer(
+                  child: Container(
+                    height: 220,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.32),
+                          Colors.black.withOpacity(0.12),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 82, 16, 0),
@@ -877,7 +899,7 @@ out skel qt;
             ),
             Positioned(
               right: 24,
-              bottom: _selectedPlace != null ? 170 : 32,
+              bottom: (_selectedPlace != null ? 170 : 32) + bottomInset,
               child: FloatingActionButton.small(
                 heroTag: 'center_user',
                 onPressed: _centerOnUser,
@@ -889,7 +911,7 @@ out skel qt;
               Positioned(
                 left: 16,
                 right: 16,
-                bottom: 24,
+                bottom: 24 + bottomInset,
                 child: GlassContainer(
                   borderRadius: 28,
                   padding: const EdgeInsets.all(18),
