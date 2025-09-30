@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'package:mongo_dart/mongo_dart.dart' hide State, Center;
 import 'package:karvaan/services/engine_stats_service.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:karvaan/widgets/glass_container.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -108,23 +109,63 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Greeting with dynamic user name
-                  Text(
-                    'Hi ${userProvider.displayName}',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  GlassContainer(
+                    padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 28),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 62,
+                          width: 62,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF38BDF8), Color(0xFF6366F1)],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primaryColor.withOpacity(0.35),
+                                blurRadius: 30,
+                                offset: const Offset(0, 14),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 32),
+                        ),
+                        const SizedBox(width: 18),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Welcome back,',
+                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                      color: Colors.white70,
+                                      letterSpacing: 0.6,
+                                    ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                userProvider.displayName,
+                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Track live health, refuels and services across all your rides.',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.white70,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  
-                  Text(
-                    'Welcome to Karvaan',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppTheme.textSecondaryColor,
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   // Vehicle selector dropdown
                   _buildVehicleSelector(),
                   const SizedBox(height: 16),
@@ -292,55 +333,66 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          padding: const EdgeInsets.only(left: 4, bottom: 10),
           child: Text(
-            'Choose from your vehicles',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textSecondaryColor,
-            ),
+            'Your fleet',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ),
-        Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<VehicleModel>(
-                isExpanded: true,
-                hint: const Text('Select a vehicle'),
-                value: _selectedVehicle,
-                icon: const Icon(Icons.arrow_drop_down),
-                elevation: 16,
-                style: const TextStyle(color: AppTheme.primaryColor, fontSize: 16),
-                onChanged: (VehicleModel? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _selectedVehicle = newValue;
-                      _loadVehicleStats(newValue.id!.toHexString());
-                    });
-                  }
-                },
-                items: _userVehicles.map<DropdownMenuItem<VehicleModel>>((VehicleModel vehicle) {
-                  return DropdownMenuItem<VehicleModel>(
-                    value: vehicle,
-                    child: Row(
-                      children: [
-                        const Icon(Icons.directions_car, size: 20, color: AppTheme.primaryColor),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${vehicle.name} (${vehicle.registrationNumber})',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+        GlassContainer(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+          borderRadius: 22,
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<VehicleModel>(
+              isExpanded: true,
+              dropdownColor: Colors.black.withOpacity(0.9),
+              value: _selectedVehicle,
+              hint: Text(
+                'Select a vehicle',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Colors.white70,
                     ),
-                  );
-                }).toList(),
               ),
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white70),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+              onChanged: (VehicleModel? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _selectedVehicle = newValue;
+                    _loadVehicleStats(newValue.id!.toHexString());
+                  });
+                }
+              },
+              items: _userVehicles.map<DropdownMenuItem<VehicleModel>>((VehicleModel vehicle) {
+                return DropdownMenuItem<VehicleModel>(
+                  value: vehicle,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.08),
+                        ),
+                        child: const Icon(Icons.directions_car_rounded, size: 18, color: Colors.white),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '${vehicle.name} (${vehicle.registrationNumber})',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ),
@@ -349,96 +401,124 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   Widget _buildNoVehiclesMessage() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const Icon(
+    return GlassContainer(
+      padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 32),
+      child: Column(
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.08),
+            ),
+            child: const Icon(
               Icons.directions_car_outlined,
-              size: 48,
-              color: AppTheme.primaryColor,
+              size: 36,
+              color: Colors.white,
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'No vehicles found',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Add a vehicle to see its stats and maintenance information.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.textSecondaryColor),
-            ),
-            const SizedBox(height: 16),
-            CustomButton(
-              text: 'Add Vehicle',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AddVehicleScreen()),
-                ).then((_) => _loadUserVehicles());
-              },
-              icon: Icons.add,
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'No vehicles yet',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add your first vehicle to unlock live telemetry, services, and fuel tracking.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.white70,
+                ),
+          ),
+          const SizedBox(height: 24),
+          CustomButton(
+            text: 'Add Vehicle',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AddVehicleScreen()),
+              ).then((_) => _loadUserVehicles());
+            },
+            icon: Icons.add,
+            isFullWidth: false,
+          ),
+        ],
       ),
     );
   }
   
   Widget _buildVehicleStats() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 36),
+        child: Center(
+          child: LoadingAnimationWidget.staggeredDotsWave(
+            color: Theme.of(context).colorScheme.primary,
+            size: 56,
+          ),
+        ),
+      );
     }
     
     if (_liveStats == null) {
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              const Icon(
-                Icons.info_outline,
-                size: 48,
-                color: AppTheme.primaryColor,
+      return GlassContainer(
+        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 30),
+        child: Column(
+          children: [
+            Container(
+              height: 68,
+              width: 68,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.1),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'No engine stats available',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              child: const Icon(
+                Icons.insights_rounded,
+                size: 34,
+                color: Colors.white,
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Visit the vehicle details page to measure live stats.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppTheme.textSecondaryColor),
-              ),
-              const SizedBox(height: 16),
-              CustomButton(
-                text: 'View Vehicle Details',
-                onPressed: () {
-                  if (_selectedVehicle != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => VehicleDetailScreen(
-                          vehicleName: _selectedVehicle!.name,
-                          registrationNumber: _selectedVehicle!.registrationNumber,
-                          vehicleId: _selectedVehicle!.id!.toHexString(),
-                        ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No engine telemetry yet',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Head to vehicle details and start a live session to stream engine performance.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white70,
+                  ),
+            ),
+            const SizedBox(height: 20),
+            CustomButton(
+              text: 'View Vehicle Details',
+              onPressed: () {
+                if (_selectedVehicle != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VehicleDetailScreen(
+                        vehicleName: _selectedVehicle!.name,
+                        registrationNumber: _selectedVehicle!.registrationNumber,
+                        vehicleId: _selectedVehicle!.id!.toHexString(),
                       ),
-                    ).then((_) => _loadVehicleStats(_selectedVehicle!.id!.toHexString()));
-                  }
-                },
-                icon: Icons.visibility,
-              ),
-            ],
-          ),
+                    ),
+                  ).then((_) => _loadVehicleStats(_selectedVehicle!.id!.toHexString()));
+                }
+              },
+              icon: Icons.timeline_rounded,
+              isFullWidth: false,
+            ),
+          ],
         ),
       );
     }
@@ -486,42 +566,51 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8.0),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: Text(
-            'Upcoming Maintenance',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
+            'Upcoming maintenance',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
           ),
         ),
         const SizedBox(height: 12),
-        Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.build_outlined,
-                  size: 48,
-                  color: AppTheme.primaryColor,
+        GlassContainer(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
+          child: Column(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.12),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'No upcoming maintenance',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                child: const Icon(
+                  Icons.build_circle_outlined,
+                  size: 32,
+                  color: Colors.white,
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Visit the vehicle details page to add service records.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppTheme.textSecondaryColor),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No reminders yet',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Log a service from the vehicle dashboard to start receiving predictive maintenance nudges.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white70,
+                    ),
+              ),
+            ],
           ),
         ),
       ],

@@ -3,9 +3,9 @@ import 'package:karvaan/models/service_model.dart';
 import 'package:karvaan/models/vehicle_model.dart';
 import 'package:karvaan/services/service_record_service.dart';
 import 'package:karvaan/services/vehicle_service.dart';
-import 'package:karvaan/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:karvaan/widgets/glass_container.dart';
 
 class ServicesListScreen extends StatefulWidget {
   const ServicesListScreen({Key? key}) : super(key: key);
@@ -82,14 +82,41 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       children: [
-        TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(child: Text('All Services', style: Theme.of(context).textTheme.titleSmall)),
-            Tab(child: Text('Upcoming', style: Theme.of(context).textTheme.titleSmall)),
-          ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: GlassContainer(
+            borderRadius: 28,
+            padding: const EdgeInsets.all(6),
+            child: TabBar(
+              controller: _tabController,
+              splashBorderRadius: BorderRadius.circular(22),
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelStyle: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+              unselectedLabelStyle: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white70,
+                  ),
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              dividerColor: Colors.transparent,
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF38BDF8), Color(0xFF6366F1)],
+                ),
+              ),
+              tabs: const [
+                Tab(text: 'All Services'),
+                Tab(text: 'Upcoming'),
+              ],
+            ),
+          ),
         ),
         Expanded(
           child: _isLoading
@@ -192,144 +219,107 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
   Widget _buildServiceCard(ServiceRecordModel service, VehicleModel vehicle) {
     final dateFormat = DateFormat('MMM d, yyyy');
     final currencyFormat = NumberFormat.currency(symbol: 'Rs. ', decimalDigits: 0);
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    service.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: service.isScheduled ? Colors.blue.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    service.isScheduled ? 'Scheduled' : 'Unscheduled',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: service.isScheduled ? Colors.blue : Colors.grey,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  Icons.directions_car,
-                  size: 16,
-                  color: Colors.grey[600],
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  vehicle.name,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: Colors.grey[600],
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  dateFormat.format(service.date),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(
-                  Icons.attach_money,
-                  size: 16,
-                  color: Colors.grey[600],
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  currencyFormat.format(service.cost),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                if (service.odometer != null) ...[
-                  const SizedBox(width: 16),
-                  Icon(
-                    Icons.speed,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${service.odometer} km',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            if (service.partsReplaced != null && service.partsReplaced!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const Text(
-                'Parts replaced:',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
+    final theme = Theme.of(context);
+
+    return GlassContainer(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  service.title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                 ),
               ),
-              const SizedBox(height: 4),
-              Wrap(
-                spacing: 6,
-                children: service.partsReplaced!.map((part) => Chip(
-                  label: Text(
-                    part,
-                    style: const TextStyle(fontSize: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    colors: service.isScheduled
+                        ? const [Color(0xFF34D399), Color(0xFF22C55E)]
+                        : const [Color(0xFF94A3B8), Color(0xFF64748B)],
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                )).toList(),
-              ),
-            ],
-            if (service.description != null && service.description!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                service.description!,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                  fontStyle: FontStyle.italic,
+                ),
+                child: Text(
+                  service.isScheduled ? 'Scheduled' : 'Logged',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              _MetaIconText(
+                icon: Icons.directions_car_rounded,
+                label: vehicle.name,
+              ),
+              const SizedBox(width: 16),
+              _MetaIconText(
+                icon: Icons.calendar_month,
+                label: dateFormat.format(service.date),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            children: [
+              _ChipBadge(
+                icon: Icons.payments_outlined,
+                label: currencyFormat.format(service.cost),
+              ),
+              if (service.odometer != null)
+                _ChipBadge(
+                  icon: Icons.speed,
+                  label: '${service.odometer} km',
+                ),
+            ],
+          ),
+          if (service.partsReplaced != null && service.partsReplaced!.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Parts replaced',
+                style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.white.withOpacity(0.8),
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: service.partsReplaced!
+                  .map((part) => _Pill(label: part))
+                  .toList(),
+            ),
           ],
-        ),
+          if (service.description != null && service.description!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              '"${service.description!.trim()}"',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white70,
+                    fontStyle: FontStyle.italic,
+                  ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -343,100 +333,169 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
       ? service.reminderDate!.difference(now).inDays
       : 0;
     
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      color: daysUntil <= 7 ? Colors.red.shade50 : Colors.blue.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    service.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+    final theme = Theme.of(context);
+
+    return GlassContainer(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(22),
+      gradient: LinearGradient(
+        colors: daysUntil <= 7
+            ? const [Color(0xFFF97316), Color(0xFFEA580C)]
+            : const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  service.title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: daysUntil <= 7 
-                      ? Colors.red.withOpacity(0.2)
-                      : Colors.blue.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    daysUntil <= 0
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  daysUntil <= 0
                       ? 'Overdue'
                       : daysUntil <= 7
-                        ? 'Due soon'
-                        : 'Upcoming',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: daysUntil <= 7 ? Colors.red : Colors.blue,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                          ? 'Due soon'
+                          : 'Upcoming',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  Icons.directions_car,
-                  size: 16,
-                  color: Colors.grey[600],
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  vehicle.name,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: Colors.grey[600],
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Reminder: ${dateFormat.format(service.reminderDate!)}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: daysUntil <= 7 ? Colors.red[700] : Colors.blue[700],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              daysUntil <= 0
-                ? 'This service is overdue!'
-                : daysUntil == 1
-                  ? 'This service is due tomorrow'
-                  : 'This service is due in $daysUntil days',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: daysUntil <= 7 ? Colors.red[700] : Colors.blue[700],
               ),
-            ),
-          ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              _MetaIconText(
+                icon: Icons.directions_car_rounded,
+                label: vehicle.name,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 16),
+              _MetaIconText(
+                icon: Icons.calendar_today_rounded,
+                label: dateFormat.format(service.reminderDate ?? service.date),
+                color: Colors.white,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            daysUntil <= 0
+                ? 'This service is overdue. Prioritize scheduling it now.'
+                : daysUntil <= 7
+                    ? 'Due within the next week. Lock in a slot to avoid last-minute stress.'
+                    : 'Coming up soon—plan ahead so your ride stays in peak condition.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withOpacity(0.9),
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetaIconText extends StatelessWidget {
+  const _MetaIconText({
+    required this.icon,
+    required this.label,
+    this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = color ?? Colors.white70;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18, color: textColor.withOpacity(0.9)),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w500,
+              ),
         ),
+      ],
+    );
+  }
+}
+
+class _ChipBadge extends StatelessWidget {
+  const _ChipBadge({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.14)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: Colors.white70),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: Colors.white.withOpacity(0.08),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Colors.white.withOpacity(0.85),
+            ),
       ),
     );
   }

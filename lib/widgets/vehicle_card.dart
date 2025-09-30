@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:karvaan/models/vehicle_model.dart';
 import 'package:karvaan/theme/app_theme.dart';
 import 'package:karvaan/screens/vehicles/vehicle_detail_screen.dart';
+import 'package:karvaan/widgets/glass_container.dart';
 
 class VehicleCard extends StatelessWidget {
   final VehicleModel vehicle;
@@ -15,110 +16,128 @@ class VehicleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => VehicleDetailScreen(
-                vehicleName: vehicle.name,
-                registrationNumber: vehicle.registrationNumber,
-                vehicleId: vehicle.id!.toHexString(),
-              ),
+    return GlassContainer(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VehicleDetailScreen(
+              vehicleName: vehicle.name,
+              registrationNumber: vehicle.registrationNumber,
+              vehicleId: vehicle.id!.toHexString(),
             ),
-          );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.directions_car,
-                    size: 40,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
+          ),
+        );
+      },
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          Container(
+            width: 82,
+            height: 82,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E40AF), Color(0xFF1E3A8A)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withOpacity(0.25),
+                  offset: const Offset(0, 14),
+                  blurRadius: 28,
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.directions_car_rounded,
+              size: 38,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  vehicle.name,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  vehicle.registrationNumber,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white.withOpacity(0.7),
+                        letterSpacing: 0.4,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                Row(
                   children: [
-                    Text(
-                      vehicle.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                    _VehicleMetaChip(
+                      icon: Icons.speed,
+                      label: vehicle.mileage != null
+                          ? '${vehicle.mileage} km'
+                          : 'Mileage TBD',
+                    ),
+                    if (lastService != null) ...[
+                      const SizedBox(width: 10),
+                      _VehicleMetaChip(
+                        icon: Icons.build_rounded,
+                        label: 'Serviced $lastService',
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      vehicle.registrationNumber,
-                      style: const TextStyle(
-                        color: AppTheme.textSecondaryColor,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.speed,
-                          size: 16,
-                          color: AppTheme.textSecondaryColor,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          vehicle.mileage != null ? '${vehicle.mileage} km' : 'No mileage data',
-                          style: const TextStyle(
-                            color: AppTheme.textSecondaryColor,
-                            fontSize: 12,
-                          ),
-                        ),
-                        if (lastService != null) ...[
-                          const SizedBox(width: 16),
-                          const Icon(
-                            Icons.build,
-                            size: 16,
-                            color: AppTheme.textSecondaryColor,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              'Last service: $lastService',
-                              style: const TextStyle(
-                                color: AppTheme.textSecondaryColor,
-                                fontSize: 12,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                    ],
                   ],
                 ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                color: AppTheme.textSecondaryColor,
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.white70,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VehicleMetaChip extends StatelessWidget {
+  const _VehicleMetaChip({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.09),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.white.withOpacity(0.8)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Colors.white.withOpacity(0.78),
+                  fontWeight: FontWeight.w500,
+                ),
+          ),
+        ],
       ),
     );
   }

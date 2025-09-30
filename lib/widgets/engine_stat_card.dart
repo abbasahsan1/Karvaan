@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:karvaan/theme/app_theme.dart';
+import 'package:karvaan/widgets/glass_container.dart';
 
 class EngineStatCard extends StatelessWidget {
   final String title;
@@ -21,64 +22,65 @@ class EngineStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return GlassContainer(
+      onTap: onTap,
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Icon(
-                    icon,
-                    color: color,
-                    size: 20,
+              Container(
+                height: 38,
+                width: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      color.withOpacity(0.9),
+                      color.withOpacity(0.5),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black54,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+                ),
+                child: Icon(icon, color: Colors.white, size: 20),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      value,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white.withOpacity(0.75),
+                        fontWeight: FontWeight.w500,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (unit != null)
-                    Text(
-                      unit!,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
-                      ),
-                    ),
-                ],
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (unit != null)
+                Text(
+                  unit!,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -105,14 +107,14 @@ class EngineStatGroup extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: AppTheme.primaryColor),
+              Icon(icon, size: 20, color: Colors.white.withOpacity(0.8)),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
               ),
             ],
           ),
