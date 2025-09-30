@@ -5,6 +5,7 @@ import 'package:karvaan/services/service_record_service.dart';
 import 'package:karvaan/services/vehicle_service.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:karvaan/screens/services/service_locator_map_screen.dart';
 import 'package:karvaan/widgets/glass_container.dart';
 
 class ServicesListScreen extends StatefulWidget {
@@ -141,33 +142,44 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
   }
 
   Widget _buildAllServicesTab() {
+    final theme = Theme.of(context);
+    final List<Widget> items = [
+      _buildMapExploreCard(),
+    ];
+
     if (_vehicles.isEmpty) {
-      return const Center(
-        child: Text('No vehicles found. Add a vehicle to track service records.'),
+      items.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Text(
+            'No vehicles found. Add a vehicle to track service records and start logging maintenance.',
+            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+          ),
+        ),
       );
-    }
+    } else {
+      final allServices = <ServiceRecordModel>[];
+      for (var services in _servicesByVehicle.values) {
+        allServices.addAll(services);
+      }
 
-    final allServices = <ServiceRecordModel>[];
-    for (var services in _servicesByVehicle.values) {
-      allServices.addAll(services);
-    }
-    
-    if (allServices.isEmpty) {
-      return const Center(
-        child: Text('No service records found. Add service records for your vehicles.'),
-      );
-    }
+      if (allServices.isEmpty) {
+        items.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              'No service records found. Keep your maintenance history up to date by logging services here.',
+              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+            ),
+          ),
+        );
+      } else {
+        // Sort all services by date (newest first)
+        allServices.sort((a, b) => b.date.compareTo(a.date));
 
-    // Sort all services by date (newest first)
-    allServices.sort((a, b) => b.date.compareTo(a.date));
+        items.add(const SizedBox(height: 16));
 
-    return RefreshIndicator(
-      onRefresh: _loadData,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: allServices.length,
-        itemBuilder: (context, index) {
-          final service = allServices[index];
+        for (final service in allServices) {
           // Find the vehicle this service belongs to
           final vehicleId = service.vehicleId.toHexString();
           final vehicle = _vehicles.firstWhere(
@@ -178,10 +190,79 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
               registrationNumber: 'Unknown',
             ),
           );
-          
-          return _buildServiceCard(service, vehicle);
-        },
+          items.add(_buildServiceCard(service, vehicle));
+        }
+      }
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: items,
       ),
+    );
+  }
+
+  Widget _buildMapExploreCard() {
+    final theme = Theme.of(context);
+    return GlassContainer(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF38BDF8), Color(0xFF6366F1)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.map_rounded, color: Colors.white),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  'Explore nearby services',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Open the interactive Karvaan map to locate petrol & CNG stations, workshops, and your saved mechanics. Add new spots with a long press and get instant routing.',
+            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: _openServiceLocator,
+            icon: const Icon(Icons.navigation_rounded),
+            label: const Text('Open service map'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openServiceLocator() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ServiceLocatorMapScreen()),
     );
   }
 

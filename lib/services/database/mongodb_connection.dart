@@ -14,6 +14,7 @@ class MongoDBConnection {
   static const String fuelEntriesCollection = 'fuel_entries';
   static const String servicesCollection = 'service_records';
   static const String engineStatsCollection = 'engine_stats';
+  static const String serviceLocationsCollection = 'service_locations';
 
   // Direct MongoDB connection string
   static const String _mongoUri = 'mongodb://abbasahsan1:2103040@karvaanapp-shard-00-00.da1dd.mongodb.net:27017,karvaanapp-shard-00-01.da1dd.mongodb.net:27017,karvaanapp-shard-00-02.da1dd.mongodb.net:27017/karvaan?ssl=true&replicaSet=atlas-2xolaj-shard-0&authSource=admin&retryWrites=true&w=majority';

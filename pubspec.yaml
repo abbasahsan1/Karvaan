@@ -21,6 +21,9 @@ dependencies:
   cupertino_icons: ^1.0.6
   flutter_svg: ^2.0.9
   google_fonts: ^6.1.0
+  flutter_map: ^7.0.0
+  latlong2: ^0.9.0
+  geolocator: ^11.0.0
   
   # Functionality
   http: ^1.1.0
