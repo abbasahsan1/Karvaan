@@ -60,7 +60,7 @@ class AppTheme {
       useMaterial3: true,
       scaffoldBackgroundColor: isDark ? backgroundDarkColor : backgroundColor,
       splashFactory: InkRipple.splashFactory,
-      textTheme: GoogleFonts.poppinsTextTheme(
+      textTheme: GoogleFonts.outfitTextTheme(
         brightness == Brightness.dark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
       ),
     );
@@ -78,8 +78,8 @@ class AppTheme {
         onSecondary: Colors.white,
         error: errorColor,
         onError: Colors.white,
-        background: isDark ? backgroundDarkColor : backgroundColor,
-        onBackground: onBackground,
+
+
         surface: surface,
         onSurface: onBackground,
       ),
@@ -94,7 +94,7 @@ class AppTheme {
           statusBarIconBrightness: isDark ? Brightness.light : Brightness.light,
           statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
         ),
-        titleTextStyle: GoogleFonts.poppins(
+        titleTextStyle: GoogleFonts.outfit(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: onBackground,
@@ -102,13 +102,13 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: surface,
-        surfaceTintColor: Colors.white.withOpacity(0.08),
+        surfaceTintColor: Colors.white.withValues(alpha: 0.08),
         elevation: 4,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
           side: BorderSide(
-            color: Colors.white.withOpacity(glassBorderOpacity),
+            color: Colors.white.withValues(alpha: glassBorderOpacity),
             width: 1,
           ),
         ),
@@ -142,22 +142,22 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: onBackground,
-          side: BorderSide(color: Colors.white.withOpacity(0.3)),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white.withOpacity(isDark ? 0.05 : 0.08),
+        fillColor: Colors.white.withValues(alpha: isDark ? 0.05 : 0.08),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.18)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -169,8 +169,8 @@ class AppTheme {
         ),
         prefixIconColor: Colors.white70,
         suffixIconColor: Colors.white54,
-        labelStyle: TextStyle(color: Colors.white.withOpacity(0.72)),
-        hintStyle: TextStyle(color: Colors.white.withOpacity(0.55)),
+        labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
+        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.55)),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primaryColor,
@@ -188,7 +188,7 @@ class AppTheme {
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
       ),
       dividerTheme: DividerThemeData(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         thickness: 1,
       ),
       chipTheme: ChipThemeData.fromDefaults(
@@ -196,7 +196,7 @@ class AppTheme {
         brightness: brightness,
         labelStyle: TextStyle(color: onBackground),
       ).copyWith(
-        backgroundColor: Colors.white.withOpacity(0.12),
+        backgroundColor: Colors.white.withValues(alpha: 0.12),
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),

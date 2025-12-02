@@ -2,11 +2,13 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:karvaan/models/engine_stats_model.dart';
 import 'package:karvaan/models/vehicle_model.dart';
+import 'package:karvaan/models/metric_definition.dart';
 import 'package:karvaan/providers/user_provider.dart';
 import 'package:karvaan/services/vehicle_service.dart';
 import 'package:karvaan/theme/app_theme.dart';
 import 'package:karvaan/widgets/custom_button.dart';
-import 'package:karvaan/widgets/engine_stat_card.dart';
+import 'package:karvaan/widgets/metric_list_item.dart';
+import 'package:karvaan/screens/metrics/metric_detail_screen.dart';
 import 'package:karvaan/screens/vehicles/vehicle_detail_screen.dart';
 import 'package:karvaan/screens/vehicles/add_vehicle_screen.dart';
 import 'package:provider/provider.dart';
@@ -30,6 +32,109 @@ class _HomeScreenState extends State<HomeScreen> {
   EngineStatsModel? _liveStats;
   final _engineStatsService = EngineStatsService.instance;
   final _vehicleService = VehicleService.instance;
+  
+  // Define all metrics to be shown in the list
+  final List<MetricDefinition> _metrics = [
+    MetricDefinition(
+      id: 'rpm',
+      name: 'Engine RPM',
+      icon: Icons.speed,
+      unit: 'RPM',
+      color: AppTheme.primaryColor,
+      getValue: (stats) => stats.engineRpm,
+      formatValue: (val) => val.toStringAsFixed(0),
+    ),
+    MetricDefinition(
+      id: 'speed',
+      name: 'Vehicle Speed',
+      icon: Icons.directions_car,
+      unit: 'km/h',
+      color: Colors.blue,
+      getValue: (stats) => stats.vehicleSpeed,
+    ),
+    MetricDefinition(
+      id: 'load',
+      name: 'Calculated Load',
+      icon: Icons.trending_up,
+      unit: '%',
+      color: Colors.orange,
+      getValue: (stats) => stats.calculatedLoadValue,
+    ),
+    MetricDefinition(
+      id: 'coolant',
+      name: 'Coolant Temp',
+      icon: Icons.thermostat,
+      unit: '°C',
+      color: Colors.red,
+      getValue: (stats) => stats.coolantTemperature,
+    ),
+    MetricDefinition(
+      id: 'intake_air',
+      name: 'Intake Air Temp',
+      icon: Icons.air,
+      unit: '°C',
+      color: Colors.green,
+      getValue: (stats) => stats.intakeAirTemperature,
+    ),
+    MetricDefinition(
+      id: 'maf',
+      name: 'Air Flow Rate',
+      icon: Icons.air,
+      unit: 'g/s',
+      color: Colors.purple,
+      getValue: (stats) => stats.airFlowRate,
+    ),
+    MetricDefinition(
+      id: 'fuel_trim_short',
+      name: 'Short Term Fuel Trim',
+      icon: Icons.tune,
+      unit: '%',
+      color: Colors.teal,
+      getValue: (stats) => stats.shortTermFuelTrim,
+    ),
+    MetricDefinition(
+      id: 'fuel_trim_long',
+      name: 'Long Term Fuel Trim',
+      icon: Icons.tune,
+      unit: '%',
+      color: Colors.indigo,
+      getValue: (stats) => stats.longTermFuelTrim,
+    ),
+    MetricDefinition(
+      id: 'fuel_pressure',
+      name: 'Fuel Pressure',
+      icon: Icons.speed,
+      unit: 'kPa',
+      color: Colors.deepOrange,
+      getValue: (stats) => stats.fuelPressure,
+      formatValue: (val) => val.toStringAsFixed(0),
+    ),
+    MetricDefinition(
+      id: 'throttle',
+      name: 'Throttle Position',
+      icon: Icons.straighten,
+      unit: '%',
+      color: Colors.deepPurple,
+      getValue: (stats) => stats.absoluteThrottlePosition,
+    ),
+    MetricDefinition(
+      id: 'timing',
+      name: 'Timing Advance',
+      icon: Icons.timer,
+      unit: '°',
+      color: Colors.brown,
+      getValue: (stats) => stats.timingAdvance,
+    ),
+    MetricDefinition(
+      id: 'map',
+      name: 'Intake Manifold Pressure',
+      icon: Icons.compress,
+      unit: 'kPa',
+      color: Colors.blueGrey,
+      getValue: (stats) => stats.intakeManifoldPressure,
+      formatValue: (val) => val.toStringAsFixed(0),
+    ),
+  ];
   
   @override
   void initState() {
@@ -124,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primaryColor.withOpacity(0.35),
+                                color: AppTheme.primaryColor.withValues(alpha: 0.35),
                                 blurRadius: 30,
                                 offset: const Offset(0, 14),
                               ),
@@ -192,138 +297,89 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
-  
-
-
-  Widget _buildEngineStatsDisplay() {
+  Widget _buildMetricsList() {
     if (_liveStats == null) return const SizedBox.shrink();
     
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        EngineStatGroup(
-          title: 'Engine Performance',
-          icon: Icons.speed,
-          children: [
-            EngineStatCard(
-              title: 'Engine RPM',
-              value: _liveStats!.engineRpm.toStringAsFixed(0),
-              icon: Icons.speed,
-              unit: 'RPM',
-              color: AppTheme.primaryColor,
-            ),
-            EngineStatCard(
-              title: 'Vehicle Speed',
-              value: _liveStats!.vehicleSpeed.toStringAsFixed(1),
-              icon: Icons.directions_car,
-              unit: 'km/h',
-              color: Colors.blue,
-            ),
-            EngineStatCard(
-              title: 'Calculated Load',
-              value: _liveStats!.calculatedLoadValue.toStringAsFixed(1),
-              icon: Icons.trending_up,
-              unit: '%',
-              color: Colors.orange,
-            ),
-          ],
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+          child: Text(
+            'Live Metrics',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+          ),
         ),
-        const SizedBox(height: 16),
-        EngineStatGroup(
-          title: 'Temperature & Air',
-          icon: Icons.thermostat,
-          children: [
-            EngineStatCard(
-              title: 'Coolant Temp',
-              value: _liveStats!.coolantTemperature.toStringAsFixed(1),
-              icon: Icons.thermostat,
-              unit: '°C',
-              color: Colors.red,
-            ),
-            EngineStatCard(
-              title: 'Intake Air Temp',
-              value: _liveStats!.intakeAirTemperature.toStringAsFixed(1),
-              icon: Icons.air,
-              unit: '°C',
-              color: Colors.green,
-            ),
-            EngineStatCard(
-              title: 'Air Flow Rate',
-              value: _liveStats!.airFlowRate.toStringAsFixed(1),
-              icon: Icons.air,
-              unit: 'g/s',
-              color: Colors.purple,
-            ),
-          ],
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _metrics.length,
+          itemBuilder: (context, index) {
+            final metric = _metrics[index];
+            return MetricListItem(
+              definition: metric,
+              value: metric.getValue(_liveStats!),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MetricDetailScreen(
+                      definition: metric,
+                      vehicleId: _selectedVehicle!.id!.toHexString(),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         ),
-        const SizedBox(height: 16),
-        EngineStatGroup(
-          title: 'Fuel System',
-          icon: Icons.local_gas_station,
-          children: [
-            EngineStatCard(
-              title: 'Fuel System Status',
-              value: _liveStats!.fuelSystemStatus,
-              icon: Icons.info_outline,
-              color: Colors.amber,
+        // Oxygen Sensors (Dynamic)
+        if (_liveStats!.oxygenSensorVoltages.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+            child: Text(
+              'Oxygen Sensors',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
             ),
-            EngineStatCard(
-              title: 'Short Term Fuel Trim',
-              value: _liveStats!.shortTermFuelTrim.toStringAsFixed(1),
-              icon: Icons.trending_up,
-              unit: '%',
-              color: Colors.teal,
-            ),
-            EngineStatCard(
-              title: 'Long Term Fuel Trim',
-              value: _liveStats!.longTermFuelTrim.toStringAsFixed(1),
-              icon: Icons.trending_up,
-              unit: '%',
-              color: Colors.indigo,
-            ),
-            EngineStatCard(
-              title: 'Fuel Pressure',
-              value: _liveStats!.fuelPressure.toStringAsFixed(0),
-              icon: Icons.speed,
-              unit: 'kPa',
-              color: Colors.deepOrange,
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        EngineStatGroup(
-          title: 'Throttle & Timing',
-          icon: Icons.tune,
-          children: [
-            EngineStatCard(
-              title: 'Throttle Position',
-              value: _liveStats!.absoluteThrottlePosition.toStringAsFixed(1),
-              icon: Icons.straighten,
-              unit: '%',
-              color: Colors.deepPurple,
-            ),
-            EngineStatCard(
-              title: 'Timing Advance',
-              value: _liveStats!.timingAdvance.toStringAsFixed(1),
-              icon: Icons.timer,
-              unit: '°',
-              color: Colors.brown,
-            ),
-            EngineStatCard(
-              title: 'Intake Manifold Pressure',
-              value: _liveStats!.intakeManifoldPressure.toStringAsFixed(0),
-              icon: Icons.compress,
-              unit: 'kPa',
-              color: Colors.blueGrey,
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        EngineStatGroup(
-          title: 'Oxygen Sensors',
-          icon: Icons.sensors,
-          children: _buildOxygenSensorCards(),
-        ),
+          ),
+          ..._liveStats!.oxygenSensorVoltages.entries.map((entry) {
+            final sensorId = entry.key;
+            final voltage = entry.value;
+            
+            // Create dynamic definition for this sensor
+            final definition = MetricDefinition(
+              id: 'o2_$sensorId',
+              name: '$sensorId Voltage',
+              icon: Icons.electric_bolt,
+              unit: 'V',
+              color: Colors.cyan,
+              getValue: (stats) => stats.oxygenSensorVoltages[sensorId] ?? 0.0,
+              formatValue: (val) => val.toStringAsFixed(2),
+            );
+            
+            return MetricListItem(
+              definition: definition,
+              value: voltage,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MetricDetailScreen(
+                      definition: definition,
+                      vehicleId: _selectedVehicle!.id!.toHexString(),
+                    ),
+                  ),
+                );
+              },
+            );
+          }).toList(),
+        ],
       ],
     );
   }
@@ -348,7 +404,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: DropdownButtonHideUnderline(
             child: DropdownButton<VehicleModel>(
               isExpanded: true,
-              dropdownColor: Colors.black.withOpacity(0.9),
+              dropdownColor: Colors.black.withValues(alpha: 0.9),
               value: _selectedVehicle,
               hint: Text(
                 'Select a vehicle',
@@ -378,7 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.08),
+                          color: Colors.white.withValues(alpha: 0.08),
                         ),
                         child: const Icon(Icons.directions_car_rounded, size: 18, color: Colors.white),
                       ),
@@ -410,7 +466,7 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 72,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.08),
+              color: Colors.white.withValues(alpha: 0.08),
             ),
             child: const Icon(
               Icons.directions_car_outlined,
@@ -474,7 +530,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 68,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
               ),
               child: const Icon(
                 Icons.insights_rounded,
@@ -523,43 +579,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     
-    return _buildEngineStatsDisplay();
-  }
-
-
-
-
-
-  List<Widget> _buildOxygenSensorCards() {
-    final List<Widget> cards = [];
-    
-    // Add cards for each oxygen sensor voltage
-    _liveStats!.oxygenSensorVoltages.forEach((sensorId, voltage) {
-      cards.add(
-        EngineStatCard(
-          title: '$sensorId Voltage',
-          value: voltage.toStringAsFixed(2),
-          icon: Icons.electric_bolt,
-          unit: 'V',
-          color: Colors.cyan,
-        ),
-      );
-      
-      // Add corresponding fuel trim if available
-      if (_liveStats!.oxygenSensorFuelTrims.containsKey(sensorId)) {
-        cards.add(
-          EngineStatCard(
-            title: '$sensorId Trim',
-            value: _liveStats!.oxygenSensorFuelTrims[sensorId]!.toStringAsFixed(1),
-            icon: Icons.tune,
-            unit: '%',
-            color: Colors.lightGreen,
-          ),
-        );
-      }
-    });
-    
-    return cards;
+    return _buildMetricsList();
   }
 
   Widget _buildUpcomingMaintenanceSection() {
@@ -586,7 +606,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 64,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.12),
+                  color: Colors.white.withValues(alpha: 0.12),
                 ),
                 child: const Icon(
                   Icons.build_circle_outlined,
@@ -617,6 +637,3 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
-// Using the updated EngineStatGroup from engine_stat_card.dart instead
-// This class is now deprecated and will be removed in future updates

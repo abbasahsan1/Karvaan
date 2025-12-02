@@ -29,15 +29,15 @@ class GlassContainer extends StatelessWidget {
         gradient: gradient ??
             LinearGradient(
               colors: [
-                Colors.white.withOpacity(0.18),
-                Colors.white.withOpacity(0.08),
+                Colors.white.withValues(alpha: 0.18),
+                Colors.white.withValues(alpha: 0.08),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
-          color: Colors.white.withOpacity(AppTheme.glassBorderOpacity),
+          color: Colors.white.withValues(alpha: AppTheme.glassBorderOpacity),
           width: 1,
         ),
       ),
@@ -58,7 +58,7 @@ class GlassContainer extends StatelessWidget {
             sigmaY: AppTheme.glassBlurSigma,
           ),
           child: Material(
-            color: Colors.white.withOpacity(0.02),
+            color: Colors.white.withValues(alpha: 0.02),
             child: InkWell(
               borderRadius: BorderRadius.circular(borderRadius),
               onTap: onTap,
@@ -167,8 +167,8 @@ class _GlowingBlob extends StatelessWidget {
           shape: BoxShape.circle,
           gradient: RadialGradient(
             colors: [
-              colors.first.withOpacity(0.55),
-              colors.last.withOpacity(0.08),
+              colors.first.withValues(alpha: 0.55),
+              colors.last.withValues(alpha: 0.08),
             ],
           ),
         ),
