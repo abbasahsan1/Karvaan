@@ -10,20 +10,22 @@ Karvaan is a comprehensive vehicle management app designed to help vehicle owner
 - **Fuel Tracking**: Monitor fuel consumption and expenses
 - **Expense Analytics**: Get insights into your vehicle expenses
 - **Performance Metrics**: Track vehicle performance over time
-- **Document Management**: Store important vehicle documents
 
 ### Latest Additions (v1.5.x)
-- **Live Engine Statistics**: Real-time monitoring of engine performance metrics
   - Engine RPM, Vehicle Speed, and Load Value
   - Coolant and Intake Air Temperature
   - Fuel System Status and Pressure
   - Throttle Position and Timing
   - Oxygen Sensor Data
-- **Enhanced UI/UX**:
   - Grid-based metrics display in home and vehicle screens
   - Improved loading animations
   - Supporting text for better user guidance
   - Streamlined navigation
+
+### Recent Updates (Dec 2025)
+- **Metric Screens**: Added `metric_detail_screen` for detailed metric visualization
+- **New Widgets**: Added `engine_performance_chart`, `metric_list_item` for improved data display
+- **Deprecated Files Removed**: Cleaned up old screens and widgets for better maintainability
 
 ### Security & Performance
 - **Secure Authentication**: Password hashing for enhanced security
@@ -56,7 +58,9 @@ karvaan/
 │   ├── widgets/
 │   │   ├── custom_button.dart
 │   │   ├── confirm_dialog.dart
-│   │   └── stats_card.dart
+│   │   ├── stats_card.dart
+│   │   ├── engine_performance_chart.dart
+│   │   ├── metric_list_item.dart
 │   ├── screens/
 │   │   ├── splash_screen.dart
 │   │   ├── auth/
@@ -78,6 +82,8 @@ karvaan/
 │   │   │   └── add_fuel_entry_screen.dart
 │   │   ├── analytics/
 │   │   │   └── analytics_dashboard.dart
+│   │   ├── metrics/
+│   │   │   └── metric_detail_screen.dart
 │   │   ├── profile/
 │   │   │   └── profile_screen.dart
 │   │   └── settings/
@@ -128,6 +134,10 @@ flutter run
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Changelog
+
+- Dec 2025: Added metric screens and widgets, removed deprecated files for codebase cleanup.
 
 ## Acknowledgements
 
