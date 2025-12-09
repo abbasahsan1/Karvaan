@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:karvaan/models/engine_stats_model.dart';
 import 'package:karvaan/models/service_model.dart';
 import 'package:karvaan/models/vehicle_model.dart';
+import 'package:karvaan/services/engine_stats_service.dart';
 import 'package:karvaan/services/service_record_service.dart';
 import 'package:karvaan/services/vehicle_service.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +10,7 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:karvaan/screens/services/service_locator_map_screen.dart';
 import 'package:karvaan/widgets/glass_container.dart';
 import 'package:karvaan/screens/services/ai_car_companion_tab.dart';
+import 'package:karvaan/widgets/engine_performance_chart.dart';
 
 class ServicesListScreen extends StatefulWidget {
   const ServicesListScreen({Key? key}) : super(key: key);
@@ -19,12 +22,13 @@ class ServicesListScreen extends StatefulWidget {
 class _ServicesListScreenState extends State<ServicesListScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ServiceRecordService _serviceService = ServiceRecordService.instance;
+  final EngineStatsService _engineStatsService = EngineStatsService.instance;
   final VehicleService _vehicleService = VehicleService.instance;
   
   bool _isLoading = true;
   List<VehicleModel> _vehicles = [];
   Map<String, List<ServiceRecordModel>> _servicesByVehicle = {};
-  List<ServiceRecordModel> _upcomingServices = [];
+  Map<String, List<EngineStatsModel>> _engineStatsByVehicle = {};
   String? _errorMessage;
 
   @override
@@ -53,6 +57,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
       
       // Initialize map to store services by vehicle
       _servicesByVehicle = {};
+      _engineStatsByVehicle = {};
       
       // For each vehicle, get service records
       for (var vehicle in vehicles) {
@@ -61,12 +66,12 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
           
           final services = await _serviceService.getServiceRecordsForVehicle(vehicleId);
           _servicesByVehicle[vehicleId] = services;
+
+          final stats = await _engineStatsService.getEngineStatsForVehicle(vehicleId);
+          _engineStatsByVehicle[vehicleId] = stats;
         }
       }
       
-      // Load upcoming service reminders
-      _upcomingServices = await _serviceService.getUpcomingServiceReminders();
-
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -115,7 +120,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
               ),
               tabs: const [
                 Tab(text: 'All Services'),
-                Tab(text: 'Upcoming'),
+                Tab(text: 'Reports'),
                 Tab(text: 'AI Companion'),
               ],
             ),
@@ -135,7 +140,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
                       controller: _tabController,
                       children: [
                         _buildAllServicesTab(),
-                        _buildUpcomingServicesTab(),
+                        _buildReportsTab(),
                         const AICarCompanionTab(),
                       ],
                     ),
@@ -269,33 +274,139 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
     );
   }
 
-  Widget _buildUpcomingServicesTab() {
-    if (_upcomingServices.isEmpty) {
-      return const Center(
-        child: Text('No upcoming service reminders found.'),
+  Widget _buildReportsTab() {
+    final theme = Theme.of(context);
+    final vehiclesWithStats = _vehicles.where((v) {
+      final id = v.id?.toHexString();
+      return id != null && (_engineStatsByVehicle[id]?.isNotEmpty ?? false);
+    }).toList();
+
+    if (_vehicles.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _loadData,
+        child: ListView(
+          padding: const EdgeInsets.all(32),
+          children: [
+            Text(
+              'Add a vehicle to start seeing live telemetry, health reports, and charts.',
+              style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white70),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (vehiclesWithStats.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _loadData,
+        child: ListView(
+          padding: const EdgeInsets.all(32),
+          children: [
+            Text(
+              'Start a live session from the vehicle dashboard to stream metrics. We will chart RPM, speed, temps, load, O2 sensors and more here.',
+              style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white70),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       );
     }
 
     return RefreshIndicator(
       onRefresh: _loadData,
-      child: ListView.builder(
+      child: ListView(
         padding: const EdgeInsets.all(16),
-        itemCount: _upcomingServices.length,
-        itemBuilder: (context, index) {
-          final service = _upcomingServices[index];
-          // Find the vehicle this service belongs to
-          final vehicleId = service.vehicleId.toHexString();
-          final vehicle = _vehicles.firstWhere(
-            (v) => v.id!.toHexString() == vehicleId,
-            orElse: () => VehicleModel(
-              userId: service.userId,
-              name: 'Unknown Vehicle',
-              registrationNumber: 'Unknown',
+        children: [
+          Text(
+            'Live telemetry reports',
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
             ),
-          );
-          
-          return _buildUpcomingServiceCard(service, vehicle);
-        },
+          ),
+          const SizedBox(height: 12),
+          ...vehiclesWithStats.map((vehicle) {
+            final vehicleId = vehicle.id!.toHexString();
+            final stats = _engineStatsByVehicle[vehicleId] ?? [];
+            final latest = _latestStat(stats);
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    vehicle.name,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _ReportStatCard(
+                        title: 'RPM',
+                        value: latest != null ? latest.engineRpm.toStringAsFixed(0) : '—',
+                        icon: Icons.speed,
+                        gradient: const LinearGradient(colors: [Color(0xFF38BDF8), Color(0xFF6366F1)]),
+                        width: 160,
+                      ),
+                      _ReportStatCard(
+                        title: 'Speed (km/h)',
+                        value: latest != null ? latest.vehicleSpeed.toStringAsFixed(1) : '—',
+                        icon: Icons.directions_car_filled_rounded,
+                        gradient: const LinearGradient(colors: [Color(0xFF22C55E), Color(0xFF16A34A)]),
+                        width: 160,
+                      ),
+                      _ReportStatCard(
+                        title: 'Coolant (°C)',
+                        value: latest != null ? latest.coolantTemperature.toStringAsFixed(1) : '—',
+                        icon: Icons.thermostat,
+                        gradient: const LinearGradient(colors: [Color(0xFFF97316), Color(0xFFF59E0B)]),
+                        width: 160,
+                      ),
+                      _ReportStatCard(
+                        title: 'Engine Load %',
+                        value: latest != null ? latest.calculatedLoadValue.toStringAsFixed(0) : '—',
+                        icon: Icons.auto_graph,
+                        gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)]),
+                        width: 160,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  EnginePerformanceChart(
+                    stats: stats,
+                    title: 'Engine RPM trend',
+                    getValue: (s) => s.engineRpm,
+                    lineColor: const Color(0xFF38BDF8),
+                    unit: 'rpm',
+                  ),
+                  const SizedBox(height: 12),
+                  EnginePerformanceChart(
+                    stats: stats,
+                    title: 'Vehicle speed trend',
+                    getValue: (s) => s.vehicleSpeed,
+                    lineColor: const Color(0xFF22C55E),
+                    unit: 'km/h',
+                  ),
+                  const SizedBox(height: 12),
+                  EnginePerformanceChart(
+                    stats: stats,
+                    title: 'Coolant temperature trend',
+                    getValue: (s) => s.coolantTemperature,
+                    lineColor: const Color(0xFFF97316),
+                    unit: '°C',
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -408,91 +519,81 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
     );
   }
 
-  Widget _buildUpcomingServiceCard(ServiceRecordModel service, VehicleModel vehicle) {
-    final dateFormat = DateFormat('MMM d, yyyy');
-    
-    // Calculate days until reminder
-    final now = DateTime.now();
-    final daysUntil = service.reminderDate != null
-      ? service.reminderDate!.difference(now).inDays
-      : 0;
-    
-    final theme = Theme.of(context);
+  EngineStatsModel? _latestStat(List<EngineStatsModel> stats) {
+    if (stats.isEmpty) return null;
+    stats.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return stats.first;
+  }
+}
 
-    return GlassContainer(
-      margin: const EdgeInsets.only(bottom: 18),
-      padding: const EdgeInsets.all(22),
-      gradient: LinearGradient(
-        colors: daysUntil <= 7
-            ? const [Color(0xFFF97316), Color(0xFFEA580C)]
-            : const [Color(0xFF3B82F6), Color(0xFF2563EB)],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  service.title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
+class _ReportStatCard extends StatelessWidget {
+  const _ReportStatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    this.subtitle,
+    this.gradient,
+    this.width,
+  });
+
+  final String title;
+  final String value;
+  final String? subtitle;
+  final IconData icon;
+  final Gradient? gradient;
+  final double? width;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      width: width,
+      child: GlassContainer(
+        padding: const EdgeInsets.all(18),
+        gradient: gradient,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: Colors.white),
                 ),
+                const Spacer(),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  daysUntil <= 0
-                      ? 'Overdue'
-                      : daysUntil <= 7
-                          ? 'Due soon'
-                          : 'Upcoming',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: theme.textTheme.labelLarge?.copyWith(color: Colors.white.withOpacity(0.85)),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle!,
+                style: theme.textTheme.labelMedium?.copyWith(color: Colors.white70),
               ),
             ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _MetaIconText(
-                icon: Icons.directions_car_rounded,
-                label: vehicle.name,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 16),
-              _MetaIconText(
-                icon: Icons.calendar_today_rounded,
-                label: dateFormat.format(service.reminderDate ?? service.date),
-                color: Colors.white,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            daysUntil <= 0
-                ? 'This service is overdue. Prioritize scheduling it now.'
-                : daysUntil <= 7
-                    ? 'Due within the next week. Lock in a slot to avoid last-minute stress.'
-                    : 'Coming up soon—plan ahead so your ride stays in peak condition.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withOpacity(0.9),
-                ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
+
 
 class _MetaIconText extends StatelessWidget {
   const _MetaIconText({
