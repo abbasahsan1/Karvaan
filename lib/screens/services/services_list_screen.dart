@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:karvaan/screens/services/service_locator_map_screen.dart';
 import 'package:karvaan/widgets/glass_container.dart';
+import 'package:karvaan/screens/services/ai_car_companion_tab.dart';
 
 class ServicesListScreen extends StatefulWidget {
   const ServicesListScreen({Key? key}) : super(key: key);
@@ -29,7 +30,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadData();
   }
 
@@ -115,6 +116,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
               tabs: const [
                 Tab(text: 'All Services'),
                 Tab(text: 'Upcoming'),
+                Tab(text: 'AI Companion'),
               ],
             ),
           ),
@@ -134,6 +136,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> with SingleTick
                       children: [
                         _buildAllServicesTab(),
                         _buildUpcomingServicesTab(),
+                        const AICarCompanionTab(),
                       ],
                     ),
         ),
